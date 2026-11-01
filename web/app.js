@@ -118,23 +118,49 @@ if (!hosted) {
 
 /* Unread badge: editions newer than the newest one you have actually looked at. The shell shows the
  * count on this app's dock/bar mark (WizardApp.badge); a report counts as read once it is on screen
- * in a visible window. "Seen" is the newest edition date read, kept on this device. */
+ * in a visible window. "Seen" (the newest edition date read) lives on the server, so the badge, the
+ * Wizard OS inbox (api/inbox) and every device agree. The old per-device value is only a migration hint. */
 const SEEN = 'morning-report.seen';
-const seen = () => { try { return localStorage.getItem(SEEN) || ''; } catch (e) { return ''; } };
+const localSeen = () => { try { return localStorage.getItem(SEEN) || ''; } catch (e) { return ''; } };
+let serverSeen = null, seenKnown = false, marking = null;
+const seen = () => serverSeen || '';
 const looking = () => !document.hidden && (window.WizardApp?.view?.isVisible?.() ?? true);
 function badge() {
+  if (!seenKnown) return;
   const eds = reports.filter((r) => r.markdown);
-  // First run on a device: only the newest edition counts as unread, never the whole archive.
-  if (!seen() && eds.length > 1) { try { localStorage.setItem(SEEN, eds[1].date); } catch (e) {} }
-  const s = seen(), n = eds.filter((r) => r.date > s).length;
+  const s = seen(), n = s ? eds.filter((r) => r.date > s).length : Math.min(eds.length, 1);
   try { window.WizardApp?.badge?.set(n); } catch (e) {}
 }
-function markSeen() {
-  if (!current?.date || !looking()) return;
-  if (current.date > seen()) { try { localStorage.setItem(SEEN, current.date); } catch (e) {} }
+async function postSeen(date) {
+  const r = await fetch('api/inbox/act', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ key: 'edition:' + date, action: 'done' }) });
+  if (!r.ok) throw new Error('seen');
+  if (date > seen()) serverSeen = date;
+}
+async function loadSeen() {
+  try {
+    const d = await getJSON('api/seen');
+    serverSeen = typeof d.seen === 'string' ? d.seen : '';
+    seenKnown = true;
+    if (!serverSeen) {
+      // No read state on the server yet: start from the newest edition (or this device's newer local value),
+      // so an old report never shows up as a stale unread item.
+      const eds = reports.filter((r) => r.markdown);
+      const local = localSeen();
+      const seed = local && eds.some((r) => r.date === local) ? local : eds[0]?.date;
+      if (seed) await postSeen(seed).catch(() => {});
+    }
+  } catch (e) {}
   badge();
 }
-addEventListener('storage', (e) => { if (e.key === SEEN) badge(); });
+function markSeen() {
+  if (!current?.date || !looking() || !seenKnown) return;
+  if (current.date > seen() && marking !== current.date) {
+    const date = marking = current.date;
+    postSeen(date).then(badge, () => {}).finally(() => { if (marking === date) marking = null; });
+  }
+  badge();
+}
 
 async function refresh() {
   try {
@@ -143,10 +169,10 @@ async function refresh() {
     const top = (d.reports || []).find((r) => r.markdown)?.date;
     if (top && top !== newest) { const onNewest = current?.date === newest; reports = d.reports; fillPicker(); if (onNewest) await show(top); }
   } catch (e) {}
-  badge(); markSeen();
+  await loadSeen(); markSeen();
 }
 
-load().then(() => { badge(); markSeen(); });
+load().then(loadSeen).then(markSeen);
 // A new edition arrives each morning: check every few minutes while open, and whenever it comes back into view.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 setInterval(refresh, 5 * 60 * 1000);

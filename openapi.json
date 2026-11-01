@@ -10,6 +10,11 @@
     "/api/reports/{date}.pdf": {"get": {"summary": "The PDF edition for a date, when one exists",
       "parameters": [{"name": "date", "in": "path", "required": true, "schema": {"type": "string", "format": "date"}}],
       "responses": {"200": {"description": "application/pdf"}, "404": {"description": "No PDF"}}}},
+    "/api/seen": {"get": {"summary": "Read state: newest edition seen and how many newer editions are unread", "responses": {"200": {"description": "{seen,unread}"}}}},
+    "/api/inbox": {"get": {"summary": "Wizard OS inbox feed v1: one item for the newest edition while it is unread, otherwise none",
+      "responses": {"200": {"description": "{inbox:1,items:[{key:'edition:<date>',title,text,time,priority,open,actions:[{id:'done',label}]}]}"}}}},
+    "/api/inbox/act": {"post": {"summary": "Act on an inbox item; action done marks that edition read (application/json only)",
+      "responses": {"200": {"description": "{ok:true}"}, "400": {"description": "Unknown action or item"}, "404": {"description": "No such edition"}, "415": {"description": "Not application/json"}}}},
     "/mcp": {"post": {"summary": "Stateless JSON-RPC MCP: initialize, tools/list, tools/call (reports_list, report_read), ping",
       "responses": {"200": {"description": "JSON-RPC response"}, "202": {"description": "Notification acknowledged"}}}}
   }
