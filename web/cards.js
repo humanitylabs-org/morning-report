@@ -75,10 +75,13 @@
   }
 
   /* Selling: things the owner has listed for sale, one line each, same look as a portfolio.
-   *   {"kind":"selling","v":1,"currency":"฿","usdRate":0.0296,"items":[{"name","url","price","market","state","buyers","newBuyers","soldPrice"}]}
-   * Line: name · bar · ฿asking · mkt ฿middle (each with ≈ dollars under it) · buyers (or Deal/Sold). Every bar shares one scale (the
-   * biggest price on the card) so items compare by size; asking above the market middle draws hatched red, below dotted green.
-   * With 2+ items a total line comes first, amounts only (no bar). */
+   *   {"kind":"selling","v":1,"currency":"฿","usdRate":0.0296,"items":[{"name","url","price","market","state",
+   *     "buyers","newBuyers","messages","newMessages","soldPrice"}]}
+   * Line: name · bar · ฿asking · mkt ฿middle (each with ≈ dollars under it) · who is interested (or Deal/Sold).
+   * Every bar shares one scale (the biggest price on the card) so items compare by size; asking above the market
+   * middle draws hatched red, below dotted green. No total line (Miguel, 2 Nov 2026: a summed price means nothing).
+   * Interest reads "1 interested" with "1 message · ±0" under it: messages so far and the change since the last
+   * report (newMessages, else newBuyers for older blocks). "Buyer" is never used: nobody has bought anything. */
   function selling(d) {
     const cur = typeof d.currency === 'string' && d.currency.length <= 3 ? d.currency : '';
     const rate = num(d.usdRate) && d.usdRate > 0 ? d.usdRate : null;
@@ -87,13 +90,18 @@
     const items = (d.items || []).map((it) => ({ it, price: num(it.price) ?? 0, market: num(it.market) }));
     const scale = Math.max(...items.map((x) => Math.max(x.price, x.market ?? 0)), 0.01);
     const list = h('ul', 'mr-card mr-portfolio mr-selling');
+    /* -> { top, sub, tone, said } : two short lines and a spoken version for screen readers. */
     const status = (it) => {
       const sold = num(it.soldPrice);
-      if (it.state === 'sold') return ['Sold' + (sold ? ' ' + amt(sold) : ''), 'up'];
-      if (it.state === 'pending') return ['Deal' + (sold ? ' ' + amt(sold) : ''), 'up'];
-      const b = num(it.buyers) ?? 0, n = num(it.newBuyers) ?? 0;
-      if (!b) return ['No buyers', 'flat'];
-      return [`${b} buyer${b === 1 ? '' : 's'}${n ? ` (${n} new)` : ''}`, 'up'];
+      if (it.state === 'sold') { const t = 'Sold' + (sold ? ' ' + amt(sold) : ''); return { top: t, sub: '', tone: 'up', said: t }; }
+      if (it.state === 'pending') { const t = 'Deal' + (sold ? ' ' + amt(sold) : ''); return { top: t, sub: '', tone: 'up', said: t }; }
+      const b = num(it.buyers) ?? 0, m = num(it.messages), dm = num(it.newMessages) ?? num(it.newBuyers) ?? 0;
+      const top = b ? `${b} interested` : 'No one yet';
+      const delta = dm > 0 ? '+' + dm : '±0';
+      const msgs = m != null ? `${m} message${m === 1 ? '' : 's'}` : '';
+      const sub = msgs ? `${msgs} · ${delta}` : delta;
+      const said = `${b ? b + ' interested' : 'no one interested yet'}${msgs ? ', ' + msgs : ''}, ${dm > 0 ? dm + ' new since yesterday' : 'no change since yesterday'}`;
+      return { top, sub, tone: b ? 'up' : 'flat', fresh: dm > 0, said };
     };
     /* Amounts: two right-aligned columns, baht on top and (≈ dollars) right under it. */
     const money2 = (label, v) => {
@@ -102,26 +110,22 @@
       if (rate) c.append(h('span', 'mr-sl-usd', '(' + usd(v) + ')'));
       return c;
     };
-    const row = (name, price, market, url, st, cls, withBar) => {
-      const li = h('li', 'mr-pf' + (cls ? ' ' + cls : ''));
+    const row = (name, price, market, url, st) => {
+      const li = h('li', 'mr-pf');
       const n = h(url ? 'a' : 'span', 'mr-pf-name', name);
       if (url) { n.href = url; n.target = '_blank'; n.rel = 'noopener noreferrer'; }
-      const b = !withBar ? h('span', 'mr-pf-bar mr-pf-nobar') : bar(price, market ?? price, scale, rate);
-      if (withBar && market) b.lastChild.className = 'mr-pf-diff mr-' + (price > market ? 'down' : price < market ? 'up' : 'flat');
+      const b = bar(price, market ?? price, scale, rate);
+      if (market) b.lastChild.className = 'mr-pf-diff mr-' + (price > market ? 'down' : price < market ? 'up' : 'flat');
       const a = h('span', 'mr-pf-amt');
       a.append(money2('', price), market ? money2('mkt', market) : h('span', 'mr-sl-col'));
-      li.append(n, b, a, h('span', 'mr-pf-pl mr-' + st[1], st[0]));
-      li.setAttribute('aria-label', `${name}: asking ${amt(price)}${rate ? ' (about ' + usd(price) + ')' : ''}${market ? ', typical ' + amt(market) : ''}, ${st[0]}`);
+      const s = h('span', 'mr-pf-pl mr-sl-st mr-' + st.tone);
+      s.append(h('span', 'mr-sl-top', st.top));
+      if (st.sub) s.append(h('span', 'mr-sl-sub' + (st.fresh ? ' mr-sl-new' : ''), st.sub));
+      li.append(n, b, a, s);
+      li.setAttribute('aria-label', `${name}: asking ${amt(price)}${rate ? ' (about ' + usd(price) + ')' : ''}${market ? ', typical ' + amt(market) : ''}, ${st.said}`);
       return li;
     };
-    if (items.length > 1) {
-      const price = items.reduce((s, x) => s + x.price, 0);
-      const market = items.every((x) => x.market) ? items.reduce((s, x) => s + x.market, 0) : null;
-      const buyers = items.reduce((s, x) => s + (num(x.it.buyers) ?? 0), 0);
-      const fresh = items.reduce((s, x) => s + (num(x.it.newBuyers) ?? 0), 0);
-      list.append(row(`${items.length} items`, price, market, '', status({ buyers, newBuyers: fresh }), 'mr-pf-total', false));
-    }
-    for (const x of items) list.append(row(String(x.it.name || 'Item'), x.price, x.market, safeUrl(x.it.url || ''), status(x.it), '', true));
+    for (const x of items) list.append(row(String(x.it.name || 'Item'), x.price, x.market, safeUrl(x.it.url || ''), status(x.it)));
     return list;
   }
 

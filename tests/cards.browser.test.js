@@ -58,6 +58,25 @@ const block = {
     assert.equal(r.bad, 'PRE');
     assert.equal(r.unknown, 'PRE');
     assert.ok(r.kinds.includes('health'));
+    // selling: no total line, "N interested" + "M messages · ±0/+n", never "buyer"
+    const sell = await page.evaluate(() => {
+      const c = window.MorningCards.render('selling', JSON.stringify({ kind: 'selling', v: 1, currency: '฿', usdRate: 0.03, items: [
+        { name: 'A', price: 1200, market: 1950, state: 'for_sale', buyers: 0, newBuyers: 0, messages: 0, newMessages: 0 },
+        { name: 'B', price: 31500, market: 24900, state: 'for_sale', buyers: 1, newBuyers: 0, messages: 1, newMessages: 0 },
+        { name: 'C', price: 100, state: 'for_sale', buyers: 2, newBuyers: 1, messages: 5, newMessages: 3 },
+        { name: 'D', price: 100, state: 'for_sale', buyers: 1, newBuyers: 1 },
+        { name: 'E', price: 100, state: 'sold', soldPrice: 90 }] }));
+      document.getElementById('out').append(c);
+      return { rows: c.querySelectorAll('li').length, total: c.querySelectorAll('.mr-pf-total').length,
+        st: [...c.querySelectorAll('.mr-sl-st')].map((s) => [...s.children].map((x) => x.textContent)),
+        fresh: c.querySelectorAll('.mr-sl-new').length, text: c.textContent, aria: c.querySelector('li:nth-child(2)').getAttribute('aria-label') };
+    });
+    assert.equal(sell.rows, 5);
+    assert.equal(sell.total, 0);
+    assert.deepEqual(sell.st, [['No one yet', '0 messages · ±0'], ['1 interested', '1 message · ±0'], ['2 interested', '5 messages · +3'], ['1 interested', '+1'], ['Sold ฿90']]);
+    assert.equal(sell.fresh, 2);
+    assert.ok(!/buyer/i.test(sell.text), 'never says buyer');
+    assert.match(sell.aria, /1 interested, 1 message, no change since yesterday/);
     console.log('cards.browser.test: ok');
   } finally { await browser.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

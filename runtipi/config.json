@@ -10,8 +10,8 @@
     "app"
   ],
   "description": "Read-only reader for dated morning reports written by your agent. Unread badge for new editions.",
-  "tipi_version": 1,
-  "version": "0.8.1",
+  "tipi_version": 2,
+  "version": "0.8.2",
   "source": "https://github.com/oscarhenrycollins/morning-report",
   "exposable": false,
   "supported_architectures": [
@@ -19,7 +19,7 @@
     "arm64"
   ],
   "created_at": 1791500000000,
-  "updated_at": 1793435034000,
+  "updated_at": 1793585110000,
   "dynamic_config": true,
   "min_tipi_version": "4.8.0",
   "uid": 1000,

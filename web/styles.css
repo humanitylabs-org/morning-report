@@ -72,13 +72,15 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
 .mr-paper .mr-selling .mr-pf-amt { display: contents; }
 .mr-paper .mr-selling .mr-sl-col { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
 .mr-paper .mr-selling .mr-sl-usd { font-size: 11px; color: #9a9488; }
+.mr-paper .mr-selling .mr-sl-st { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.25; }
+.mr-paper .mr-selling .mr-sl-sub { font-size: 11px; font-weight: 400; color: #9a9488; }
+.mr-paper .mr-selling .mr-sl-sub.mr-sl-new { color: var(--up); font-weight: 600; }
 /* Phone: name and P&L on top, the bar and amounts under them. */
 @container wz-app (max-width: 520px) {
   .mr-paper .mr-pf { grid-template-columns: minmax(0, 1fr) 9ch 13ch; gap: 4px 12px; }
   .mr-pf-name { grid-column: 1 / 3; grid-row: 1; } .mr-pf-pl { grid-column: 3; grid-row: 1; }
   .mr-pf-bar { grid-column: 1; grid-row: 2; } .mr-pf-amt { grid-column: 2 / 4; grid-row: 2; font-size: 12.5px; }
   .mr-paper .mr-selling .mr-sl-col { grid-row: 2; font-size: 12.5px; }
-  .mr-paper .mr-selling .mr-pf-total .mr-pf-bar { visibility: hidden; }
 }
 
 /* Health block (cards.js): traffic-light tiles side by side, one plain line, a 7-day strip. One scale for every metric:
