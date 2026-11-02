@@ -1,7 +1,10 @@
 /* Minimal, safe Markdown renderer: builds DOM nodes only (never innerHTML from report text).
  * Supports headings, paragraphs, bullet/numbered lists, bold, italics, inline code, links (http/https),
  * horizontal rules, blockquotes and ``` fenced blocks (drawn as cards by cards.js when the language is a
- * known card kind, else preformatted text). Anything else renders as plain text. */
+ * known card kind, else preformatted text). Anything else renders as plain text.
+ * One-line HTML comments are never shown. `<!-- mr:section {json} -->` right under a `## ` heading marks a section
+ * that came from an app (docs/report-section.md): its JSON lands on that heading as data-section; `mr:edition` and
+ * `mr:off` become hidden .mr-meta nodes. routes.js reads both to draw the pickers. */
 (() => {
   'use strict';
   const safeUrl = (u) => { try { const x = new URL(u, location.href); return /^https?:$/.test(x.protocol) ? x.href : null; } catch (e) { return null; } };
@@ -33,9 +36,20 @@
     const flushPara = () => { if (para.length) { const p = document.createElement('p'); inline(p, para.join(' ')); root.append(p); para = []; } };
     const flushList = () => { list = null; };
     const flushQuote = () => { quote = null; };
+    let lastH2 = null;
     for (const raw of lines) {
       const line = raw.replace(/\s+$/, '');
       let m;
+      if (!fence && (m = /^\s*<!--\s*(.*?)\s*-->\s*$/.exec(line))) {
+        const meta = /^mr:(section|edition|off)\s+(\{.*\})$/.exec(m[1]);
+        let data = null;
+        if (meta) { try { data = JSON.parse(meta[2]); } catch (e) { data = null; } }
+        if (data && typeof data === 'object' && !Array.isArray(data)) {
+          if (meta[1] === 'section' && lastH2 && lastH2 === root.lastChild) lastH2.dataset.section = JSON.stringify(data);
+          else if (meta[1] !== 'section') { const n = document.createElement('div'); n.hidden = true; n.className = 'mr-meta'; n.dataset.kind = meta[1]; n.dataset.json = JSON.stringify(data); root.append(n); }
+        }
+        continue;
+      }
       if (fence) {
         if (/^\s*```\s*$/.test(line)) {
           const text = fence.body.join('\n');
@@ -48,7 +62,8 @@
       if (!line.trim()) { flushPara(); flushList(); flushQuote(); continue; }
       if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) {
         flushPara(); flushList(); flushQuote();
-        const h = document.createElement('h' + Math.min(m[1].length, 4)); inline(h, m[2]); root.append(h); continue;
+        const h = document.createElement('h' + Math.min(m[1].length, 4)); inline(h, m[2]); root.append(h);
+        lastH2 = h.tagName === 'H2' ? h : null; continue;
       }
       if (/^(-{3,}|\*{3,}|_{3,})$/.test(line.trim())) { flushPara(); flushList(); flushQuote(); root.append(document.createElement('hr')); continue; }
       if ((m = /^\s*([-*+]|\d+[.)])\s+(.*)$/.exec(line))) {

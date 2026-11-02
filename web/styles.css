@@ -142,3 +142,16 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
 .mr-route-seg button span { white-space: nowrap; }
 /* Narrow: words only, so the four choices stay on one row. */
 @container wz-app (max-width: 480px) { .mr-route-seg button { padding: 4px 7px; } .mr-route-ic { display: none; } }
+
+/* App sections (docs/report-section.md): heading links to the app, "so far" until final, picker under the heading,
+   and the "Turned off" list at the end. None of it prints: the paper copy is the report only. */
+.mr-paper h2.mr-sec { display: flex; align-items: baseline; gap: 8px; }
+.mr-paper h2 .mr-sec-link { color: inherit; text-decoration: none; }
+.mr-paper h2 .mr-sec-link:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mr-sec-state { font: 600 10.5px/1 var(--font); letter-spacing: .04em; text-transform: none; color: #8a8478; padding: 3px 6px; border: 1px solid #e5dfd2; border-radius: 999px; }
+.mr-paper h2.mr-sec + .mr-route { margin: -2px 0 12px; }
+.mr-route-seg button[data-locked] { opacity: .38; cursor: not-allowed; }
+.mr-off { margin-top: 8px; }
+.mr-off-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0; }
+.mr-off-row strong { min-width: 6em; }
+@media print { .mr-route, .mr-off, .mr-sec-state { display: none !important; } }
