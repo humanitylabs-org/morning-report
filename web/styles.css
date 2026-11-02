@@ -4,8 +4,10 @@
 .mr-bar[hidden], html.mr-in-bar .mr-bar { display: none !important; }
 /* Controls live in the window title bar: the sheet runs to the bottom edge. */
 html.mr-in-bar .mr-scroll { padding-bottom: 10px; }
-/* Date picker dead centre; PDF on the right. Equal side columns keep the middle group centred. */
-.mr-bar:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+/* Date picker dead centre; PDF on the right. Equal side columns keep the middle group centred; neither side gets
+ * narrower than what it holds, so PDF stays whole and inside the bar when the bar is tight (a phone, the room the
+ * Wizard orb takes at the bar's end) and the middle group moves over instead. */
+.mr-bar:not([hidden]) { display: grid; grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr); }
 .mr-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
 .mr-bar #pdf { justify-self: end; }
 .mr-grow { flex: 1; }
