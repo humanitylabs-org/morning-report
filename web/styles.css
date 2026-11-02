@@ -155,3 +155,15 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
 .mr-off-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin: 4px 0; }
 .mr-off-row strong { min-width: 6em; }
 @media print { .mr-route, .mr-off, .mr-sec-state { display: none !important; } }
+
+/* The picker folds away (one choice is the same on every section): a faint sliders button on the heading or line
+ * opens it. Kept quiet so the sheet reads like paper; hidden on print. */
+.mr-route[hidden], .mr-route-seg[hidden] { display: none !important; }
+.mr-route-tog { display: inline-flex; align-items: center; gap: 4px; margin-left: auto; min-width: 32px; min-height: 32px; padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: #a39d90; font: 600 12px/1 var(--font); letter-spacing: 0; text-transform: none; cursor: pointer; vertical-align: middle; }
+.mr-route-tog:hover, .mr-route-tog[aria-expanded="true"] { background: #f1ece0; color: #3d3a33; }
+.mr-route-tog .mr-route-ic { width: 15px; height: 15px; display: inline-block !important; }
+.mr-route-cur:empty { display: none; }
+.mr-paper li .mr-route-tog { margin-left: 2px; min-height: 26px; padding: 0 5px; }
+.mr-off-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+.mr-off-row .mr-route { flex-basis: 100%; }
+@media print { .mr-route-tog { display: none !important; } }

@@ -39,8 +39,18 @@ const ROUTES = {
       const page = await ctx.newPage();
       page.on('pageerror', (e) => errors.push(String(e)));
       await page.goto(base + '/', { waitUntil: 'networkidle' });
-      await page.waitForSelector('#paper h2.mr-sec + .mr-route');
-      await page.waitForSelector('#paper .mr-off .mr-route');
+      await page.waitForSelector('#paper h2.mr-sec + .mr-route', { state: 'attached' });
+      await page.waitForSelector('#paper .mr-off .mr-route', { state: 'attached' });
+      // Folded by default: no picker shows until its button is tapped; the toggle names a choice only when unusual.
+      const folded = await page.evaluate(() => ({
+        open: [...document.querySelectorAll('#paper .mr-route')].filter((w) => !w.hidden).length,
+        togs: [...document.querySelectorAll('#paper .mr-route-tog')].map((b) => [b.closest('h2,li,.mr-off-row')?.tagName, b.textContent.trim(), b.getAttribute('aria-expanded')]),
+      }));
+      assert.equal(folded.open, 0, 'every picker starts folded');
+      assert.deepEqual(folded.togs.filter((t) => t[0] === 'H2'), [['H2', '', 'false'], ['H2', '', 'false']], 'section headings carry a quiet button');
+      assert.deepEqual(folded.togs.filter((t) => t[0] === 'DIV'), [['DIV', 'Off', 'false']], 'the Turned off list says Off');
+      if (shots) await page.screenshot({ path: path.join(shots, `sections-${name}-folded.png`), fullPage: true });
+      await page.evaluate(() => { for (const b of document.querySelectorAll('#paper .mr-route-tog')) b.click(); });
       const r = await page.evaluate(() => {
         const paper = document.getElementById('paper');
         const secs = [...paper.querySelectorAll('h2.mr-sec')];
@@ -75,10 +85,14 @@ const ROUTES = {
       await page.waitForFunction(() => /next edition/.test(document.querySelector('h2.mr-sec:nth-of-type(2) + .mr-route .mr-route-note')?.textContent || ''));
       const after = await health.locator('button[data-to="off"]').getAttribute('aria-checked');
       assert.equal(after, 'true');
+      // After saving it folds again, keeps its note, and the heading's button now says Off.
+      await page.waitForFunction(() => document.querySelector('h2.mr-sec:nth-of-type(2) + .mr-route .mr-route-seg')?.hidden === true);
+      assert.equal((await page.locator('h2.mr-sec', { hasText: 'Health' }).locator('.mr-route-tog').textContent()).trim(), 'Off');
       assert.deepEqual(posts, [{ routes: { 'report:wizard-health': 'off' } }], 'one mocked save, nothing for the locked choice');
       if (shots) await health.screenshot({ path: path.join(shots, `sections-${name}-health-off.png`) });
       ROUTES.routes['report:wizard-health'] = 'daily';
-      assert.deepEqual(blocked, [], 'no other writes');
+      // Marking the edition seen (api/inbox/act) is the app's own read state, not a route write.
+      assert.deepEqual(blocked.filter((b) => !b.endsWith('/api/inbox/act')), [], 'no other writes');
       assert.deepEqual(errors, [], 'no page errors');
       console.log(name, 'ok', JSON.stringify({ overflow: r.overflow, rightEdge: r.rightEdge }));
       await ctx.close();

@@ -49,11 +49,34 @@
       const d = await r.json(); if (d && d.routes) info.routes = d.routes;
       for (const b of seg.querySelectorAll('button')) b.setAttribute('aria-checked', String(b.dataset.to === to));
       note.textContent = (isReport(id) && AFTER_REPORT[to]) || AFTER[to];
+      const wrap = seg.parentElement, tog = wrap && wrap.toggle;
+      if (tog) { tog.paint(); setTimeout(() => { seg.hidden = true; tog.setAttribute('aria-expanded', 'false'); }, 900); }
     } catch (e) { note.textContent = 'Couldn’t save · try again'; }
     finally { for (const b of seg.querySelectorAll('button')) b.disabled = !!b.dataset.locked; }
   }
+  /* Folded by default (Miguel, 2 Nov 2026: every section shows the same choice, so the full picker is noise): a small
+   * quiet button opens it. Once a pick is saved it folds again and leaves its one-line note. `toggle` sits on the
+   * heading or line; the panel (`wrap`, class mr-route) goes right below it. The toggle names the choice only when it
+   * is not the usual one (e.g. "Off" in the Turned off list). */
+  const SLIDERS = 'M2 4.5h7M12 4.5h2M2 11.5h2M7 11.5h7M10.5 3v3M5.5 10v3';
+  function toggleFor(id, name, wrap, seg) {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'mr-route-tog';
+    b.setAttribute('aria-expanded', 'false'); b.setAttribute('aria-label', 'Change where ' + name + ' go'); b.title = 'Change where this goes';
+    const s = document.createElementNS(NS, 'svg'); s.setAttribute('viewBox', '0 0 16 16'); s.setAttribute('aria-hidden', 'true'); s.setAttribute('class', 'mr-route-ic line');
+    const p = document.createElementNS(NS, 'path'); p.setAttribute('d', SLIDERS); s.append(p); b.append(s);
+    const lab = document.createElement('span'); lab.className = 'mr-route-cur'; b.append(lab);
+    const paint = () => { const c = routeOf(id); lab.textContent = c === 'daily' ? '' : (CHOICES.find(x => x[0] === c) || [, ''])[1]; };
+    paint(); b.paint = paint;
+    b.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      const open = b.getAttribute('aria-expanded') !== 'true';
+      b.setAttribute('aria-expanded', String(open)); seg.hidden = !open; wrap.hidden = !open && !wrap.querySelector('.mr-route-note').textContent;
+      if (open) seg.querySelector('[aria-checked="true"]')?.focus({ preventScroll: true });
+    });
+    return b;
+  }
   function picker(id, name) {
-    const wrap = document.createElement('div'); wrap.className = 'mr-route';
+    const wrap = document.createElement('div'); wrap.className = 'mr-route'; wrap.hidden = true;
     const seg = document.createElement('div'); seg.className = 'mr-route-seg'; seg.setAttribute('role', 'radiogroup'); seg.setAttribute('aria-label', 'Where ' + name + ' go');
     const cur = routeOf(id), note = document.createElement('span'); note.className = 'mr-route-note'; note.setAttribute('role', 'status');
     for (const [to, label] of CHOICES) {
@@ -63,7 +86,9 @@
       b.addEventListener('click', () => { if (b.getAttribute('aria-checked') !== 'true' && !b.dataset.locked) save(id, to, seg, note); });
       seg.append(b);
     }
+    seg.hidden = true;
     wrap.append(seg, note);
+    wrap.toggle = toggleFor(id, name, wrap, seg);
     return wrap;
   }
   const json = (t) => { try { const v = JSON.parse(t); return v && typeof v === 'object' ? v : null; } catch (e) { return null; } };
@@ -84,7 +109,8 @@
       }
       const id = routeId(m), next = h.nextElementSibling;
       if (d && d.report && id && !(next && next.classList.contains('mr-route'))) {
-        h.after(picker(id, (h.querySelector('.mr-sec-link') || h).textContent.replace(/so far$/, '').trim()));
+        const w = picker(id, (h.querySelector('.mr-sec-link') || h).textContent.replace(/so far$/, '').trim());
+        h.append(w.toggle); h.after(w);
       }
     }
   }
@@ -97,7 +123,8 @@
     const t = document.createElement('h2'); t.textContent = 'Turned off'; box.append(t);
     for (const m of offs) {
       const row = document.createElement('div'); row.className = 'mr-off-row';
-      const name = document.createElement('strong'); name.textContent = String(m.title).slice(0, 40); row.append(name, picker(routeId(m), m.title));
+      const name = document.createElement('strong'); name.textContent = String(m.title).slice(0, 40);
+      const w = picker(routeId(m), m.title); row.append(name, w.toggle, w);
       box.append(row);
     }
     paper.append(box);
@@ -116,7 +143,7 @@
     while (n && n.tagName !== 'H2') {
       if (n.tagName === 'UL') for (const li of n.children) {
         const label = li.querySelector('strong'); const id = label && byName[label.textContent.trim().toLowerCase()];
-        if (id && !li.querySelector('.mr-route')) li.append(picker(id, label.textContent.trim()));
+        if (id && !li.querySelector('.mr-route')) { const w = picker(id, label.textContent.trim()); li.append(' ', w.toggle, w); }
       }
       n = n.nextElementSibling;
     }
