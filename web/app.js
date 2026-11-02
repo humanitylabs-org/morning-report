@@ -42,6 +42,8 @@ async function show(date) {
     current = data;
     const paper = el('paper');
     paper.replaceChildren(window.MorningMarkdown.render(data.markdown));
+    // Overnight lines carry the same Chats · Badge · Morning report · Off picker as Settings › Notifications.
+    window.MorningRoutes?.decorate(paper);
     reply.clear(data.date);
     document.querySelector('.mr-scroll').scrollTop = 0;
     el('pick').value = data.date;

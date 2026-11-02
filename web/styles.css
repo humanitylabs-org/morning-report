@@ -129,3 +129,16 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
   .mr-paper h3, .mr-paper li { break-inside: avoid; }
   .mr-health { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 }
+
+/* Overnight: the Chats · Badge · Morning report · Off picker under each line (web/routes.js), in the paper's own inks. */
+.mr-route { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; margin: 6px 0 10px; }
+.mr-route-seg { display: inline-flex; gap: 2px; padding: 2px; border: 1px solid #e5dfd2; border-radius: 10px; background: #f6f1e6; }
+.mr-route-seg button { display: inline-flex; align-items: center; gap: 5px; min-height: 32px; padding: 4px 9px; border: 0; border-radius: 8px; background: transparent; color: #5a554b; font: 600 12.5px/1.1 var(--font); cursor: pointer; }
+.mr-route-seg button[aria-checked="true"] { background: #1b1a17; color: #fffdf8; }
+.mr-route-seg button:disabled { opacity: .6; cursor: default; }
+.mr-route-ic { width: 13px; height: 13px; flex: none; fill: currentColor; }
+.mr-route-ic.line { fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linejoin: round; }
+.mr-route-note { font-size: 12px; color: #6b665c; }
+.mr-route-seg button span { white-space: nowrap; }
+/* Narrow: words only, so the four choices stay on one row. */
+@container wz-app (max-width: 480px) { .mr-route-seg button { padding: 4px 7px; } .mr-route-ic { display: none; } }
