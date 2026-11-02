@@ -34,7 +34,7 @@ sheet on purpose (it is meant to be printed each morning), so a section is short
 | `report` | always `1` for this version; anything else is ignored |
 | `id` | `<app id>` or `<app id>.<name>` (`[a-z0-9-]`); an app may only send its own ids. The owner's route for it is `report:<id>` |
 | `title` | the `## ` heading, at most 40 characters |
-| `lines` | up to ~5 Markdown lines (`- ` bullets, `_italic_` notes, `**bold**`, `[label](url)` links). Hard cap 8 lines of 600 characters; headings, fences, comments and rules are dropped |
+| `lines` | up to ~5 Markdown lines (`- ` bullets, `_italic_` notes, `**bold**`, `[label](url)` links). Hard cap 8 items of 3,000 characters (a quoted post stays whole); a two-space continuation line (`  _Why it matters: ..._`) and blank lines belong to the item above, at most 20 lines in all; headings, fences, comments and rules are dropped |
 | `card` | optional fenced card the report knows how to draw (`health`, `portfolio`, `selling`; schemas at the top of each renderer in `web/cards.js`), drawn above the lines |
 | `link` | the app, a same-origin path (`/<app>/`) or https URL; the heading links to it |
 | `final` | `false` while the content may still change today (e.g. last night's sleep is still being scored). Default `true` |
@@ -94,5 +94,6 @@ under the `_Generated 06:02 Bangkok · draft_` line.
    would be wrong without it.
 3. Test it: a quiet day returns `[]`, ids stay inside the app's namespace, at most ~5 lines.
 
-Live examples: Health (`oscarhenrycollins/wizard-health`, `report_section()` in `app/server.py`) and the Calendar
+Live examples: Health (`oscarhenrycollins/wizard-health`, `report_section()` in `app/server.py`), News (two sections,
+`news.watch` Watch list and `news.headlines` News, `report()` in `oscarhenrycollins/news` `app/server.py`) and the Calendar
 adapter (`calendar_today()` in the generator's `morning_report_sections.py`).
