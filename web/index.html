@@ -21,6 +21,20 @@
 <body>
   <div class="wz-app mr-app">
     <header class="wz-head"><h1>Morning Report</h1><p id="count"></p></header>
+    <nav class="wz-bar mr-day" aria-label="Report day" hidden>
+      <span class="mr-nav">
+        <button id="older" class="wz-icon-button mr-step" type="button" aria-label="Earlier day" title="Earlier day" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
+        </button>
+        <label class="mr-pick"><span class="wz-sr">Report day</span>
+          <select id="pick" aria-label="Report day"></select>
+        </label>
+        <button id="newer" class="wz-icon-button mr-step" type="button" aria-label="Later day" title="Later day" disabled>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
+        </button>
+      </span>
+      <a id="pdf" class="wz-button secondary mr-pdf" href="#" target="_blank" rel="noopener" hidden>PDF</a>
+    </nav>
     <main class="wz-scroll mr-scroll">
       <article id="paper" class="mr-paper" aria-live="polite"></article>
       <div id="empty" class="wz-empty" hidden>
@@ -31,21 +45,6 @@
     </main>
     <div class="mr-reply"><button id="reply" class="mr-btn mr-text" type="button" aria-label="Reply to selected report text in Chats" hidden>Reply</button></div>
     <p id="status" class="wz-status" role="status" aria-live="polite"></p>
-    <nav class="mr-bar" aria-label="Report navigation">
-      <span class="mr-side" aria-hidden="true"></span>
-      <span class="mr-nav">
-        <button id="older" class="mr-btn" type="button" aria-label="Older report" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7"/></svg>
-        </button>
-        <label class="mr-pick"><span class="wz-sr">Report date</span>
-          <select id="pick" aria-label="Report date"></select>
-        </label>
-        <button id="newer" class="mr-btn" type="button" aria-label="Newer report" disabled>
-          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg>
-        </button>
-      </span>
-      <a id="pdf" class="mr-btn mr-text" href="#" target="_blank" rel="noopener" hidden>PDF</a>
-    </nav>
   </div>
 </body>
 </html>

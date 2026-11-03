@@ -1,16 +1,33 @@
 /* Morning Report: the report is a sheet of paper; the chrome around it is Wizard UI. */
-/* All controls sit at the bottom, in thumb reach. */
-.mr-bar { flex: none; display: flex; align-items: center; gap: 6px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); }
-.mr-bar[hidden], html.mr-in-bar .mr-bar { display: none !important; }
-/* Controls live in the window title bar: the sheet runs to the bottom edge. */
-html.mr-in-bar .mr-scroll { padding-bottom: 10px; }
-/* Date picker dead centre; PDF on the right. Equal side columns keep the middle group centred; neither side gets
- * narrower than what it holds, so PDF stays whole and inside the bar when the bar is tight (a phone, the room the
- * Wizard orb takes at the bar's end) and the middle group moves over instead. */
-.mr-bar:not([hidden]) { display: grid; grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr); }
-.mr-nav { display: flex; align-items: center; gap: 6px; min-width: 0; }
-.mr-bar #pdf { justify-self: end; }
-.mr-grow { flex: 1; }
+[hidden] { display: none !important; }
+/* The day switcher: one bar at the top of the window, in every skin, window and phone: earlier · day picker · later,
+ * PDF at the end. Kit bar/buttons; app layout only. */
+.mr-day { flex: none; position: relative; z-index: 2; display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: var(--wz-space-2, 8px); padding: var(--wz-space-2, 8px) var(--wz-gutter, 12px);
+  background: var(--wz-panel, var(--wz-chrome, var(--fill))); border-bottom: 1px solid var(--wz-border, var(--line)); }
+.mr-nav { display: flex; align-items: center; gap: var(--wz-space-1, 4px); min-width: 0; }
+.mr-day .mr-step { flex: none; display: inline-grid; place-items: center; min-width: var(--wz-target, 44px); min-height: var(--wz-target, 44px);
+  border: 0; border-radius: var(--wz-radius-tile, var(--r-tile)); background: var(--wz-surface, var(--fill)); color: var(--wz-text, var(--ink)); cursor: pointer; }
+.mr-day .mr-step svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.mr-day .mr-step:disabled { opacity: .35; cursor: default; }
+.mr-pick { flex: 0 1 auto; min-width: 0; }
+.mr-pick select { width: 100%; min-width: 0; max-width: 100%; min-height: var(--wz-target, 44px); padding: 0 var(--wz-space-3, 12px);
+  border-radius: var(--wz-radius-tile, var(--r-tile)); border: 1px solid var(--wz-border, var(--line-2)); background: var(--wz-surface, var(--fill));
+  color: var(--wz-text, var(--ink)); font: 650 var(--wz-text-md, .9375rem)/1.2 var(--wz-font-ui, var(--font)); text-overflow: ellipsis; cursor: pointer; }
+.mr-day .mr-pdf { min-height: var(--wz-target, 44px); padding: 0 var(--wz-space-4, 16px); display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--wz-radius-tile, var(--r-tile)); background: var(--wz-surface, var(--fill)); color: var(--wz-text, var(--ink));
+  border: 1px solid var(--wz-border, var(--line-2)); font-weight: 600; text-decoration: none; }
+.mr-day .mr-pdf[hidden] { display: none !important; }
+@media (hover: hover) { .mr-day .mr-step:not(:disabled):hover, .mr-day .mr-pdf:hover, .mr-pick select:hover { background: color-mix(in srgb, var(--wz-text, var(--ink)) 10%, var(--wz-surface, var(--fill))); } }
+/* Wide windows: the day picker sits in the middle, PDF at the end. */
+@container wz-app (min-width: 600px) {
+  .mr-day { grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr); }
+  .mr-nav { grid-column: 2; } .mr-day .mr-pdf { grid-column: 3; justify-self: end; }
+}
+/* Narrow windows: the picker takes the room the arrows leave. */
+@container wz-app (max-width: 599px) { .mr-nav .mr-pick { flex: 1 1 auto; } .mr-day .mr-pdf { padding: 0 var(--wz-space-3, 12px); } }
+/* Wizard full screen: the shell's Exit full screen pill sits over the top edge. */
+html[data-presentation="immersive"] .mr-day { padding-top: calc(var(--wz-space-2, 8px) + 40px); }
 .mr-btn { flex: none; min-width: 40px; height: 40px; border-radius: var(--r-tile); display: grid; place-items: center; color: var(--ink); background: var(--fill); text-decoration: none; font-size: 14px; font-weight: 600; }
 .mr-btn.mr-text { padding: 0 14px; }
 .mr-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
@@ -21,12 +38,8 @@ html.mr-in-bar .mr-scroll { padding-bottom: 10px; }
 .mr-reply .mr-btn { position: fixed; min-height: 44px; min-width: 72px; background: var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px rgba(0,0,0,.28); }
 @media (hover: hover) { .mr-reply .mr-btn:not(:disabled):hover { background: var(--accent); opacity: .9; } }
 @media (hover: hover) { .mr-btn:not(:disabled):hover { background: var(--fill-2); } }
-.mr-pick { flex: 0 1 auto; min-width: 0; }
-.mr-pick select { width: 100%; min-width: 0; height: 40px; padding: 0 10px; border-radius: var(--r-tile); border: 1px solid var(--line-2); background: var(--fill); color: var(--ink); font-size: 14px; font-weight: 600; }
 .mr-paper h1 { text-wrap: balance; }
-/* Inside Wizard the shell's dock already clears the home indicator; the bar sits right on it. */
-html.wz-hosted .mr-bar { padding-bottom: 8px; }
-@container wz-app (max-width: 480px) { .mr-bar { gap: 4px; padding: 8px 8px calc(8px + env(safe-area-inset-bottom, 0px)); } .mr-btn.mr-text { padding: 0 10px; } .mr-paper h1 { font-size: 21px; } }
+@container wz-app (max-width: 480px) { .mr-paper h1 { font-size: 21px; } }
 .mr-scroll { padding: 14px var(--wz-gutter, 12px) 28px; }
 
 /* The sheet: plain, high-contrast, printable. It stays paper-white in every skin on purpose. */
@@ -123,7 +136,7 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
 @media print {
   @page { margin: 14mm; }
   html, body { background: #fff !important; height: auto; }
-  .wz-head, .mr-bar, .mr-reply, .wz-status, #empty { display: none !important; }
+  .wz-head, .mr-day, .mr-reply, .wz-status, #empty { display: none !important; }
   .wz-app, .wz-scroll { display: block; height: auto; max-width: none; overflow: visible; padding: 0; }
   .mr-paper { box-shadow: none; border-radius: 0; padding: 0; background: #fff; color: #000; font-size: 11.5pt; }
   .mr-paper a { color: #000; text-decoration: none; }
