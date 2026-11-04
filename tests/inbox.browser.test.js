@@ -35,7 +35,9 @@ const seenFile = () => JSON.parse(fs.readFileSync(path.join(data, 'seen.json'), 
         return route.continue();
       });
       await ctx.addInitScript((v) => { window.__badge = []; window.__visible = v;
-        window.WizardApp = {badge: {set(n) { window.__badge.push(n); }}, view: {isVisible: () => window.__visible}}; }, visible);
+        window.__back = 0;
+        window.WizardApp = {badge: {set(n) { window.__badge.push(n); }}, view: {isVisible: () => window.__visible},
+          nav: {back() { window.__back++; return true; }}}; }, visible);
       const page = await ctx.newPage();
       await page.goto(base + '/morning-report/', {waitUntil: 'domcontentloaded'});
       await page.waitForFunction(() => window.__badge.length > 0, null, {timeout: 10000}); await sleep(300);
@@ -45,26 +47,42 @@ const seenFile = () => JSON.parse(fs.readFileSync(path.join(data, 'seen.json'), 
     const b = await device(false);
     assert.equal(await b.badge(), 1); assert.deepEqual(b.writes, []);
     assert.equal(seenFile(), '2026-01-02');
-    // Device A looks at the newest edition: marks it seen on the server via the inbox act endpoint.
+    // Device A opens and reads the newest edition on screen: still unread (Miguel, 4 Nov 2026: opening never marks it).
     const a = await device(true);
+    await sleep(2500);
+    assert.equal(seenFile(), '2026-01-02'); assert.deepEqual(a.writes, []); assert.equal(await a.badge(), 1);
+    assert.equal(await a.page.isVisible('#read-top'), true); assert.equal(await a.page.isVisible('#read-end'), true);
+    // Mark as read at the end of the report: one tap marks it on the server and leaves the screen (nav.back).
+    await a.page.click('#read-end'); await sleep(400);
     assert.equal(seenFile(), '2026-01-03');
+    assert.equal(await a.page.evaluate(() => window.__back), 1);
+    assert.equal(await a.page.isVisible('#read-top'), false); assert.equal(await a.page.isVisible('#read-end'), false);
     assert.deepEqual(a.writes, ['POST /morning-report/api/inbox/act {"key":"edition:2026-01-03","action":"done"}']);
     assert.equal(await a.badge(), 0);
     assert.deepEqual((await api('api/inbox')).items, []);
     // Device B catches up on its next refresh (it comes back into view) without marking anything itself.
     await b.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await sleep(400);
     assert.equal(await b.badge(), 0); assert.deepEqual(b.writes, []);
-    // Looking at an older edition never moves read state backwards.
-    await a.page.selectOption('#pick', '2026-01-01'); await sleep(2500);
+    // An older, already-read edition shows no Mark as read and never moves read state backwards.
+    await a.page.selectOption('#pick', '2026-01-01'); await sleep(800);
+    assert.equal(await a.page.isVisible('#read-top'), false);
     assert.equal(seenFile(), '2026-01-03'); assert.equal(a.writes.length, 1);
+    // The top button does the same: a new edition arrives, A refreshes onto it and taps Mark as read at the top.
+    fs.writeFileSync(path.join(reports, 'synthetic-2026-01-04.md'), '# Synthetic edition four\n\nHello.\n');
+    await a.page.selectOption('#pick', '2026-01-03'); await sleep(300);
+    await a.page.evaluate(() => document.dispatchEvent(new Event('visibilitychange'))); await sleep(800);
+    await a.page.selectOption('#pick', '2026-01-04'); await sleep(500);
+    assert.equal(seenFile(), '2026-01-03'); assert.equal(await a.badge(), 1);
+    await a.page.click('#read-top'); await sleep(400);
+    assert.equal(seenFile(), '2026-01-04'); assert.equal(await a.badge(), 0); assert.equal(a.writes.length, 2);
 
     // Migration: no server value yet (e.g. data volume just added). A device seeds it with the newest edition.
     fs.rmSync(path.join(data, 'seen.json'));
     const c = await device(false);
-    assert.equal(seenFile(), '2026-01-03'); assert.equal(await c.badge(), 0);
+    assert.equal(seenFile(), '2026-01-04'); assert.equal(await c.badge(), 0);
     assert.deepEqual((await api('api/inbox')).items, []);
     for (const d of [a, b, c]) await d.ctx.close();
-    console.log('PASS inbox browser: badge = inbox across two devices, read only when on screen, never backwards, seed on migration');
+    console.log('PASS inbox browser: badge = inbox across two devices, opening never marks read, top and end Mark as read do and leave the screen, never backwards, seed on migration');
   } finally {
     await browser.close(); srv.kill(); fs.rmSync(tmp, {recursive: true, force: true});
   }

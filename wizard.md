@@ -4,7 +4,7 @@ id: morning-report
 name: Morning Report
 type: service
 category: app
-version: 0.10.1
+version: 0.10.2
 summary: Read your daily morning reports, newest first, with an unread badge for new editions.
 license: GPL-3.0-only
 source: https://github.com/oscarhenrycollins/morning-report
@@ -38,4 +38,4 @@ health: /healthz
 
 # Morning Report
 
-A quiet, read-only reader for dated Markdown reports (with optional PDF editions) that a scheduled agent job writes into one folder. Newest edition on top, an unread badge on the app's icon for editions you have not read yet, step to an earlier or later day from the day switcher at the top, pick any day from its list, or open the PDF. The report folder is mounted read-only; the app's only write is which edition you last read (one small file in its data folder), so the badge, the Wizard OS inbox and every device agree. It contains no report content, no schedule and no personal preferences.
+A quiet, read-only reader for dated Markdown reports (with optional PDF editions) that a scheduled agent job writes into one folder. Newest edition on top, an unread badge on the app's icon for editions you have not marked as read yet (opening one never marks it; Mark as read at the top or the end of the report does), step to an earlier or later day from the day switcher at the top, pick any day from its list, or open the PDF. The report folder is mounted read-only; the app's only write is which edition you last read (one small file in its data folder), so the badge, the Wizard OS inbox and every device agree. It contains no report content, no schedule and no personal preferences.

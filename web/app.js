@@ -63,7 +63,7 @@ async function show(date) {
     if (data.pdf) pdf.href = 'api/reports/' + data.date + '.pdf';
     document.title = 'Morning Report · ' + shortDate(data.date);
     say(longDate(data.date));
-    markSeen();
+    readButtons();
   } catch (error) { if (request === editionRequest) say(error.message, 'error'); }
 }
 
@@ -109,15 +109,16 @@ if (!hosted) {
   });
 }
 
-/* Unread badge: editions newer than the newest one you have actually looked at. The shell shows the
- * count on this app's dock/bar mark (WizardApp.badge); a report counts as read once it is on screen
- * in a visible window. "Seen" (the newest edition date read) lives on the server, so the badge, the
- * Wizard OS inbox (api/inbox) and every device agree. The old per-device value is only a migration hint. */
+/* Unread badge: editions newer than the newest one you marked as read. The shell shows the count on this
+ * app's dock/bar mark (WizardApp.badge). Opening or reading a report never marks it read (Miguel, 4 Nov 2026:
+ * like every other notification, it stays until he taps Mark as read, at the top or the end of the report).
+ * "Seen" (the newest edition date marked read) lives on the server, so the badge, the Wizard OS inbox
+ * (api/inbox, whose own action is the same Mark as read) and every device agree. The old per-device value is
+ * only a migration hint. */
 const SEEN = 'morning-report.seen';
 const localSeen = () => { try { return localStorage.getItem(SEEN) || ''; } catch (e) { return ''; } };
 let serverSeen = null, seenKnown = false, marking = null;
 const seen = () => serverSeen || '';
-const looking = () => !document.hidden && (window.WizardApp?.view?.isVisible?.() ?? true);
 function badge() {
   if (!seenKnown) return;
   const eds = reports.filter((r) => r.markdown);
@@ -146,14 +147,30 @@ async function loadSeen() {
   } catch (e) {}
   badge();
 }
-function markSeen() {
-  if (!current?.date || !looking() || !seenKnown) return;
-  if (current.date > seen() && marking !== current.date) {
-    const date = marking = current.date;
-    postSeen(date).then(badge, () => {}).finally(() => { if (marking === date) marking = null; });
-  }
-  badge();
+const unread = () => !!(seenKnown && current?.date && current.date > seen());
+function readButtons() {
+  const show = unread();
+  for (const id of ['read-top', 'read-end']) { const b = el(id); b.hidden = !show; b.disabled = marking !== null; }
 }
+async function markRead() {
+  if (!unread() || marking) return;
+  const date = marking = current.date;
+  readButtons();
+  try {
+    await postSeen(date);
+    badge();
+    marking = null; readButtons();
+    // Finishing action leaves the screen (Wizard OS rule): back to where the owner came from.
+    let left = false;
+    try { left = window.WizardApp?.nav?.back?.() === true; } catch (e) {}
+    if (!left) say('Marked as read', 'note');
+  } catch (e) {
+    marking = null; readButtons();
+    say('Could not mark it as read. Try again.', 'error');
+  }
+}
+el('read-top').addEventListener('click', markRead);
+el('read-end').addEventListener('click', markRead);
 
 let labelledDay = briefingDay(0);
 async function refresh() {
@@ -164,12 +181,10 @@ async function refresh() {
     const top = (d.reports || []).find((r) => r.markdown)?.date;
     if (top && top !== newest) { const onNewest = current?.date === newest; reports = d.reports; fillPicker(); if (onNewest) await show(top); else if (current) el('pick').value = current.date; }
   } catch (e) {}
-  await loadSeen(); markSeen();
+  await loadSeen(); readButtons();
 }
 
-load().then(() => { clearTitlebar(); setTimeout(clearTitlebar, 3000); }).then(loadSeen).then(markSeen);
+load().then(() => { clearTitlebar(); setTimeout(clearTitlebar, 3000); }).then(loadSeen).then(readButtons);
 // A new edition arrives each morning: check every few minutes while open, and whenever it comes back into view.
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 setInterval(refresh, 5 * 60 * 1000);
-// Read only when you actually look: re-check visibility often (cheap, no network).
-setInterval(markSeen, 2000);

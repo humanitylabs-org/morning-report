@@ -22,10 +22,25 @@
 /* Wide windows: the day picker sits in the middle, PDF at the end. */
 @container wz-app (min-width: 600px) {
   .mr-day { grid-template-columns: minmax(min-content, 1fr) auto minmax(min-content, 1fr); }
-  .mr-nav { grid-column: 2; } .mr-day .mr-pdf { grid-column: 3; justify-self: end; }
+  .mr-nav { grid-column: 2; } .mr-day .mr-tools { grid-column: 3; justify-self: end; }
 }
 /* Narrow windows: the picker takes the room the arrows leave. */
 @container wz-app (max-width: 599px) { .mr-nav .mr-pick { flex: 1 1 auto; } .mr-day .mr-pdf { padding: 0 var(--wz-space-3, 12px); } }
+/* Mark as read (top bar and end of the report): the only way an edition stops counting as unread. */
+.mr-tools { display: flex; align-items: center; gap: var(--wz-space-2, 8px); min-width: 0; }
+.mr-read { min-height: var(--wz-target, 44px); padding: 0 var(--wz-space-4, 16px); display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--wz-radius-tile, var(--r-tile)); background: var(--wz-accent, var(--accent)); color: var(--wz-on-accent, var(--on-accent));
+  font: 650 var(--wz-text-md, .9375rem)/1.2 var(--wz-font-ui, var(--font)); white-space: nowrap; cursor: pointer; }
+.mr-read:disabled { opacity: .5; cursor: default; }
+@media (hover: hover) { .mr-read:not(:disabled):hover { background: color-mix(in srgb, var(--wz-accent, var(--accent)) 88%, var(--wz-text, var(--ink))); } }
+.mr-read svg { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2.6; stroke-linecap: round; stroke-linejoin: round; }
+.mr-day .mr-read { gap: var(--wz-space-2, 8px); padding: 0 var(--wz-space-4, 16px) 0 var(--wz-space-3, 12px); }
+/* Narrow windows: the top button is the tick alone so the day list keeps its room; the end of the report spells it out. */
+@container wz-app (max-width: 599px) { .mr-day .mr-read { min-width: var(--wz-target, 44px); padding: 0; }
+  .mr-day .mr-step { min-width: 38px; } .mr-day .mr-pdf { padding: 0 var(--wz-space-2, 8px); } .mr-pick select { padding: 0 var(--wz-space-1, 4px) 0 var(--wz-space-2, 8px); }
+  .mr-day .mr-read-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; } }
+.mr-end { display: flex; justify-content: center; padding: var(--wz-space-4, 16px) 0 var(--wz-space-2, 8px); }
+.mr-end:has(> [hidden]) { display: none; }
 /* Wizard full screen: the shell's Exit full screen pill sits over the top edge. */
 html[data-presentation="immersive"] .mr-day { padding-top: calc(var(--wz-space-2, 8px) + 40px); }
 .mr-btn { flex: none; min-width: 40px; height: 40px; border-radius: var(--r-tile); display: grid; place-items: center; color: var(--ink); background: var(--fill); text-decoration: none; font-size: 14px; font-weight: 600; }
