@@ -197,3 +197,18 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
 .mr-off-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
 .mr-off-row .mr-route { flex-basis: 100%; }
 @media print { .mr-route-tog { display: none !important; } }
+
+/* Friendliness pass (0.10.3, 4 Nov 2026): thumb-sized targets on touch screens, small controls on desktop. */
+@media (pointer: coarse) {
+  /* The faint "where does this go" sliders on each heading and line. */
+  .mr-route-tog { position: relative; }
+  .mr-route-tog::after { content: ""; position: absolute; inset: -6px; }
+  .mr-paper li .mr-route-tog::after { inset: -9px -6px; }
+  .mr-route-seg button { min-height: var(--wz-target, 44px); }
+  /* Inline links in the report ("source", "market", "Open Health"): a taller hit area without moving the text. */
+  .mr-paper :is(p, li, td) > a { padding-block: calc((var(--wz-target, 44px) - 1.25em) / 2); }
+  .mr-paper h2 .mr-sec-link { position: relative; }
+  .mr-paper h2 .mr-sec-link::after { content: ""; position: absolute; inset: -14px -4px; }
+  .mr-paper .mr-hl-link { padding-block: 12px; margin-block: -12px; }
+  .mr-day .mr-step { min-width: 40px; }
+}
