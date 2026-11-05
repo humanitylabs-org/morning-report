@@ -77,6 +77,20 @@ const block = {
     assert.equal(sell.fresh, 2);
     assert.ok(!/buyer/i.test(sell.text), 'never says buyer');
     assert.match(sell.aria, /1 interested, 1 message, no change since yesterday/);
+    // portfolio: one position shows that position (name + link), not an anonymous Total; several keep Total + rows
+    const pf = await page.evaluate(() => {
+      const one = window.MorningCards.render('portfolio', JSON.stringify({ kind: 'portfolio', v: 1, value: 7.84, cost: 9.81,
+        positions: [{ name: 'Benjamin Netanyahu', cost: 9.81, value: 7.84, url: 'https://polymarket.us/market/x' }] }));
+      const two = window.MorningCards.render('portfolio', JSON.stringify({ kind: 'portfolio', v: 1,
+        positions: [{ name: 'A B', cost: 5, value: 6 }, { market: 'Some market', cost: 4, value: 2 }] }));
+      const names = (c) => [...c.querySelectorAll('.mr-pf-name')].map((n) => n.textContent);
+      return { one: names(one), href: one.querySelector('a.mr-pf-name') && one.querySelector('a.mr-pf-name').href,
+        oneAmt: one.querySelector('.mr-pf-amt').textContent, two: names(two) };
+    });
+    assert.deepEqual(pf.one, ['Netanyahu']);
+    assert.equal(pf.href, 'https://polymarket.us/market/x');
+    assert.equal(pf.oneAmt, '$10 → $8');
+    assert.deepEqual(pf.two, ['Total', 'B', 'Some market']);
     console.log('cards.browser.test: ok');
   } finally { await browser.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
