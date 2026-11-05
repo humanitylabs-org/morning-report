@@ -4,7 +4,8 @@
  *   ```
  * Built from DOM nodes only (report text never goes through innerHTML). A block that is not valid
  * JSON of a known kind falls back to plain preformatted text, so a bad block is visible, never hidden.
- * A portfolio is a total line plus one line per position: put in → worth now, a bar, and the P&L. */
+ * A portfolio is a total line plus one line per position: put in → worth now, a bar, and the P&L.
+ * With a single position the card is just that position's line, named and linked. */
 (() => {
   'use strict';
   const h = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
@@ -69,6 +70,8 @@
     const cost = num(d.cost) ?? ps.reduce((s, x) => s + x.cost, 0), value = num(d.value) ?? ps.reduce((s, x) => s + x.value, 0);
     const list = h('ul', 'mr-card mr-portfolio');
     const scaleRows = Math.max(...ps.map((x) => Math.max(x.cost, x.value)), 0.01);
+    /* One position: its own line (name + link) replaces the total, which would only repeat it without saying what the bet is. */
+    if (ps.length === 1) { list.append(line(label(ps[0].p), cost, value, Math.max(cost, value, 0.01), safeUrl(ps[0].p.url || ''), 'mr-pf-total')); return list; }
     list.append(line('Total', cost, value, Math.max(cost, value, 0.01), '', 'mr-pf-total'));
     if (ps.length > 1) for (const x of ps) list.append(line(label(x.p), x.cost, x.value, scaleRows, safeUrl(x.p.url || '')));
     return list;
