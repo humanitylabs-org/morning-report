@@ -83,8 +83,10 @@
    * Line: name · bar · ฿asking · mkt ฿middle (each with ≈ dollars under it) · who is interested (or Deal/Sold).
    * Every bar shares one scale (the biggest price on the card) so items compare by size; asking above the market
    * middle draws hatched red, below dotted green. No total line (Miguel, 2 Nov 2026: a summed price means nothing).
-   * Interest reads "1 interested" with "1 message · ±0" under it: messages so far and the change since the last
-   * report (newMessages, else newBuyers for older blocks). "Buyer" is never used: nobody has bought anything. */
+   * The change since the last report leads (Miguel, 10 Nov 2026: the daily +n/±0 is what he cares about): "+2" in
+   * colour when interest grew, a quiet grey "±0" when nothing changed, with the running totals small and grey under it
+   * ("2 interested · 2 messages"). The change is newMessages, else newBuyers for older blocks.
+   * "Buyer" is never used: nobody has bought anything. */
   function selling(d) {
     const cur = typeof d.currency === 'string' && d.currency.length <= 3 ? d.currency : '';
     const rate = num(d.usdRate) && d.usdRate > 0 ? d.usdRate : null;
@@ -99,12 +101,12 @@
       if (it.state === 'sold') { const t = 'Sold' + (sold ? ' ' + amt(sold) : ''); return { top: t, sub: '', tone: 'up', said: t }; }
       if (it.state === 'pending') { const t = 'Deal' + (sold ? ' ' + amt(sold) : ''); return { top: t, sub: '', tone: 'up', said: t }; }
       const b = num(it.buyers) ?? 0, m = num(it.messages), dm = num(it.newMessages) ?? num(it.newBuyers) ?? 0;
-      const top = b ? `${b} interested` : 'No one yet';
-      const delta = dm > 0 ? '+' + dm : '±0';
+      const top = dm > 0 ? '+' + dm : '±0';
       const msgs = m != null ? `${m} message${m === 1 ? '' : 's'}` : '';
-      const sub = msgs ? `${msgs} · ${delta}` : delta;
-      const said = `${b ? b + ' interested' : 'no one interested yet'}${msgs ? ', ' + msgs : ''}, ${dm > 0 ? dm + ' new since yesterday' : 'no change since yesterday'}`;
-      return { top, sub, tone: b ? 'up' : 'flat', fresh: dm > 0, said };
+      const who = b ? `${b} interested` : 'No one yet';
+      const sub = msgs ? `${who} · ${msgs}` : who;
+      const said = `${dm > 0 ? dm + ' new since yesterday' : 'no change since yesterday'}, ${b ? b + ' interested' : 'no one interested yet'}${msgs ? ', ' + msgs : ''}`;
+      return { top, sub, tone: dm > 0 ? 'up' : 'flat', fresh: dm > 0, said };
     };
     /* Amounts: two right-aligned columns, baht on top and (≈ dollars) right under it. */
     const money2 = (label, v) => {
@@ -122,8 +124,8 @@
       const a = h('span', 'mr-pf-amt');
       a.append(money2('', price), market ? money2('mkt', market) : h('span', 'mr-sl-col'));
       const s = h('span', 'mr-pf-pl mr-sl-st mr-' + st.tone);
-      s.append(h('span', 'mr-sl-top', st.top));
-      if (st.sub) s.append(h('span', 'mr-sl-sub' + (st.fresh ? ' mr-sl-new' : ''), st.sub));
+      s.append(h('span', 'mr-sl-top' + (st.fresh ? ' mr-sl-new' : ''), st.top));
+      if (st.sub) s.append(h('span', 'mr-sl-sub', st.sub));
       li.append(n, b, a, s);
       li.setAttribute('aria-label', `${name}: asking ${amt(price)}${rate ? ' (about ' + usd(price) + ')' : ''}${market ? ', typical ' + amt(market) : ''}, ${st.said}`);
       return li;

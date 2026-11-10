@@ -58,7 +58,7 @@ const block = {
     assert.equal(r.bad, 'PRE');
     assert.equal(r.unknown, 'PRE');
     assert.ok(r.kinds.includes('health'));
-    // selling: no total line, "N interested" + "M messages · ±0/+n", never "buyer"
+    // selling: no total line, the change since yesterday leads ("+n"/"±0"), totals under it, never "buyer"
     const sell = await page.evaluate(() => {
       const c = window.MorningCards.render('selling', JSON.stringify({ kind: 'selling', v: 1, currency: '฿', usdRate: 0.03, items: [
         { name: 'A', price: 1200, market: 1950, state: 'for_sale', buyers: 0, newBuyers: 0, messages: 0, newMessages: 0 },
@@ -73,10 +73,10 @@ const block = {
     });
     assert.equal(sell.rows, 5);
     assert.equal(sell.total, 0);
-    assert.deepEqual(sell.st, [['No one yet', '0 messages · ±0'], ['1 interested', '1 message · ±0'], ['2 interested', '5 messages · +3'], ['1 interested', '+1'], ['Sold ฿90']]);
+    assert.deepEqual(sell.st, [['±0', 'No one yet · 0 messages'], ['±0', '1 interested · 1 message'], ['+3', '2 interested · 5 messages'], ['+1', '1 interested'], ['Sold ฿90']]);
     assert.equal(sell.fresh, 2);
     assert.ok(!/buyer/i.test(sell.text), 'never says buyer');
-    assert.match(sell.aria, /1 interested, 1 message, no change since yesterday/);
+    assert.match(sell.aria, /no change since yesterday, 1 interested, 1 message/);
     // portfolio: one position shows that position (name + link), not an anonymous Total; several keep Total + rows
     const pf = await page.evaluate(() => {
       const one = window.MorningCards.render('portfolio', JSON.stringify({ kind: 'portfolio', v: 1, value: 7.84, cost: 9.81,
