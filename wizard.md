@@ -4,7 +4,7 @@ id: morning-report
 name: Morning Report
 type: service
 category: app
-version: 0.10.5
+version: 0.10.6
 summary: Read your daily morning reports, newest first, with an unread badge for new editions.
 license: GPL-3.0-only
 source: https://github.com/oscarhenrycollins/morning-report
@@ -34,6 +34,9 @@ system: false
 uses: []
 needs: []
 health: /healthz
+switches:
+  contract: wizard.app-switches/1
+  path: /api/switches
 ---
 
 # Morning Report
