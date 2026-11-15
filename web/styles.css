@@ -147,6 +147,81 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
   .mr-hl-chip { font-size: 12px; gap: 5px; }
   .mr-hl-note { font-size: 10.5px; }
 }
+/* Bets block (cards.js): one tile per market, same paper tile as Health. Green = the chance rose, red = it fell. */
+.mr-paper .mr-bets, .mr-paper .mr-odds { --up: #1d6b45; --down: #a3352a; --ink: #1b1a17; --cream: #f1ece0; --mut: #6b665c;
+  container: mr-card / inline-size; margin: 0 0 14px; font-family: var(--font); font-variant-numeric: tabular-nums; }
+.mr-paper .mr-bt-intro { margin: 0 0 10px; font-size: 14px; color: #4a463e; }
+.mr-paper .mr-bt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+.mr-paper .mr-bt { --c: #8a8478; margin: 0; padding: 11px 14px 10px; background: #fffdf8; border: 1.5px solid var(--ink);
+  border-left: 7px solid var(--c); border-radius: 6px; box-shadow: 3px 3px 0 var(--ink); display: grid; gap: 8px; }
+.mr-bt.mr-up { --c: var(--up); } .mr-bt.mr-down { --c: var(--down); }
+.mr-paper .mr-bt-q { font: 700 15px/1.3 var(--font); color: var(--ink); text-decoration: none; }
+.mr-paper a.mr-bt-q:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mr-bt-lbl { font: 800 10.5px/1.2 var(--font); letter-spacing: .1em; text-transform: uppercase; color: var(--mut); }
+.mr-bt-odds, .mr-bt-money { display: grid; grid-template-columns: 9.5em minmax(80px, 1fr) minmax(10.5em, auto); align-items: center; gap: 0 12px; }
+.mr-bt-tw { display: grid; gap: 2px; }
+.mr-bt-track { position: relative; height: 14px; border-radius: 7px; background: var(--cream); box-shadow: inset 0 0 0 1px #ddd5c4; }
+.mr-bt-mid { position: absolute; left: 50%; top: -3px; bottom: -3px; border-left: 1.5px dashed #a39d90; }
+.mr-bt-move { position: absolute; top: 3px; bottom: 3px; background: var(--c); border-radius: 4px; opacity: .55; }
+.mr-bt-was, .mr-bt-is { position: absolute; top: 50%; width: 14px; height: 14px; margin: -7px 0 0 -7px; border-radius: 50%; box-sizing: border-box; }
+.mr-bt-was { border: 2.5px solid var(--c); background: #fffdf8; }
+.mr-bt-is { background: var(--c); box-shadow: 0 0 0 2px #fffdf8, 0 0 0 3.5px var(--ink); }
+.mr-bt-scale { display: flex; justify-content: space-between; font: 10px/1.2 ui-monospace, Menlo, monospace; color: #9a9488; }
+.mr-bt-big { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.1; }
+.mr-bt-num { font: 700 26px/1 ui-monospace, Menlo, monospace; letter-spacing: -.02em; color: var(--c); }
+.mr-bt-chg { font: 600 11.5px/1.3 var(--font); color: var(--c); white-space: nowrap; }
+.mr-bt-right { display: flex; align-items: center; justify-content: flex-end; gap: 8px; white-space: nowrap; }
+.mr-bt-mbar { height: 10px; border-radius: 2px; background: var(--cream); overflow: hidden; }
+.mr-bt-mfill { display: block; height: 100%; background: var(--ink); }
+.mr-bt-usd { font: 700 15px/1 ui-monospace, Menlo, monospace; color: var(--ink); }
+.mr-bt-side { font: 800 10.5px/1 var(--font); letter-spacing: .08em; text-transform: uppercase; padding: 4px 7px; border-radius: 4px;
+  color: #fffdf8; background: var(--c); }
+.mr-bt-dots { display: inline-flex; gap: 3px; }
+.mr-bt-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--ink); }
+.mr-bt-dots i.mr-bt-new { background: #d9a83a; box-shadow: 0 0 0 1.5px var(--ink); }
+.mr-paper .mr-bt-said { margin: 0; font-size: 13.5px; line-height: 1.4; color: #3d3a33; }
+.mr-bt-rec { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; margin: 14px 0 0; padding: 10px 12px;
+  background: var(--cream); border-radius: 6px; font-size: 13px; color: #3d3a33; }
+.mr-bt-sqs { display: inline-flex; flex-wrap: wrap; gap: 3px; max-width: 100%; }
+.mr-bt-sqs i { width: 11px; height: 11px; border-radius: 2px; background: #fffdf8; box-shadow: inset 0 0 0 1.5px #a39d90; }
+.mr-bt-sqs i.mr-bt-hit { background: var(--ink); box-shadow: none; }
+.mr-paper .mr-bt-foot { margin: 6px 0 0; font-size: 12px; color: #8a8478; }
+/* Odds block (cards.js): one stacked bar per model, dark = by the first date, light = extra chance by the second. */
+.mr-od-legend { display: flex; flex-wrap: wrap; gap: 4px 16px; margin: 0 0 10px; font: 600 12.5px/1.2 var(--font); color: #4a463e; }
+.mr-od-key { display: inline-flex; align-items: center; gap: 6px; }
+.mr-od-sw { width: 14px; height: 10px; border-radius: 2px; }
+.mr-od-sw.mr-od-s0, .mr-od-bar .mr-od-s0 { background: #2a4d8f; }
+.mr-od-sw.mr-od-s1, .mr-od-bar .mr-od-s1 { background: #a9bde3; }
+.mr-od-sw.mr-od-s50 { width: 0; height: 12px; border-left: 1.5px dashed var(--ink); border-radius: 0; }
+.mr-paper .mr-od-list { list-style: none; margin: 0; padding: 0; }
+.mr-paper .mr-od { margin: 0; display: grid; grid-template-columns: 14em minmax(80px, 1fr) 12.5em; align-items: center; gap: 0 12px; padding: 6px 0; }
+.mr-paper .mr-od + .mr-od { border-top: 1px solid #ece6d9; }
+.mr-od-name { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.mr-paper .mr-od-t { font: 700 14px/1.25 var(--font); color: var(--ink); text-decoration: none; }
+.mr-paper a.mr-od-t:hover { text-decoration: underline; text-underline-offset: 3px; }
+.mr-od-even { font: 11px/1.3 var(--font); color: var(--mut); }
+.mr-od-bar { position: relative; display: flex; height: 16px; border-radius: 3px; background: var(--cream); overflow: hidden; }
+.mr-od-mid { position: absolute; left: 50%; top: 0; bottom: 0; border-left: 1.5px dashed var(--ink); opacity: .55; }
+.mr-od-vals { display: grid; grid-template-columns: 4.2ch 4.2ch 6.2em; align-items: baseline; gap: 8px; white-space: nowrap; }
+.mr-od-v0 { font: 700 17px/1 ui-monospace, Menlo, monospace; color: #2a4d8f; min-width: 3.2ch; text-align: right; }
+.mr-od-v1 { font: 600 13px/1 ui-monospace, Menlo, monospace; color: #6a83b3; min-width: 3.4ch; text-align: right; }
+.mr-od-chip { justify-self: start; font: 700 10.5px/1 var(--font); padding: 3px 5px; border-radius: 4px; background: var(--cream); }
+.mr-od-chip.mr-od-nochip { visibility: hidden; }
+.mr-od-chip.mr-up { color: var(--up); } .mr-od-chip.mr-down { color: var(--down); }
+/* Phone: the name above its bar; tiles stack the label over the track. */
+@container mr-card (max-width: 520px) {
+  .mr-paper .mr-od { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .mr-od-name { grid-column: 1; grid-row: 1; } .mr-od-vals { grid-column: 2; grid-row: 1; } .mr-od-bar { grid-column: 1 / 3; grid-row: 2; }
+  .mr-paper .mr-bt { padding: 10px 11px 9px; }
+  .mr-bt-odds { grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; }
+  .mr-bt-odds .mr-bt-lbl { grid-column: 1; grid-row: 1; } .mr-bt-big { grid-column: 2; grid-row: 1 / 3; } .mr-bt-tw { grid-column: 1; grid-row: 2; }
+  .mr-bt-money { grid-template-columns: minmax(40px, 1fr) auto; gap: 4px 10px; }
+  .mr-bt-money .mr-bt-lbl { grid-column: 1 / -1; }
+  .mr-od-vals { grid-template-columns: 4.2ch 4.2ch auto; }
+  .mr-od-chip.mr-od-nochip { display: none; }
+  .mr-bt-num { font-size: 22px; }
+}
+@media print { .mr-bets, .mr-odds { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 .mr-paper .mr-pre { margin: 0 0 10px; padding: 10px 12px; background: #f1ece0; border-radius: 6px; overflow-x: auto; font: 12.5px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
 
 /* Print: only the sheet, edge to edge, black on white. */

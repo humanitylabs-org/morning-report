@@ -190,13 +190,156 @@
     return card;
   }
 
-  const kinds = { portfolio, selling, health };
+  /* Bets: Polymarket markets where big one-sided money and the odds moved the same way in the last day.
+   *   {"kind":"bets","v":1,"hours":24,"items":[{"title","url","outcome":"Yes","side":"yes"|"no","then":0.32,"now":0.37,
+   *     "net":69707,"wallets":1,"fresh":0,"bets":2}],"record":{"wins":17,"n":23,"implied":16.4,"pnl":-1.38}|null}
+   * then/now are always the chance of `outcome` (Yes), so a bet against shows as Yes falling. One tile per market:
+   * the question, an odds track (hollow ring = yesterday, filled = now, a coloured arrow between), the big number, and
+   * who bet: a money bar on one scale across the card, a FOR/AGAINST badge and one dot per wallet. A plain sentence
+   * says what it means. The track record is a row of squares (filled = came true) against what the odds expected. */
+  const usdK = (v) => (v >= 1e6 ? '$' + (v / 1e6).toFixed(1) + 'M' : '$' + Math.round(v / 1e3) + 'k');
+  const pc = (p) => { const x = p * 100; return (x > 0 && x < 1 ? '<1' : x > 99 && x < 100 ? '>99' : Math.round(x)) + '%'; };
+  const clamp01 = (x) => Math.min(1, Math.max(0, x));
+  function bets(d) {
+    const items = (Array.isArray(d.items) ? d.items : []).slice(0, 5).map((it) => ({ it, then: clamp01(num(it.then) ?? 0), now: clamp01(num(it.now) ?? 0), net: Math.max(num(it.net) ?? 0, 0) }));
+    const card = h('section', 'mr-card mr-bets');
+    card.append(h('p', 'mr-bt-intro', `Big money bet on one side, and the odds moved its way in the last ${num(d.hours) || 24} hours.`));
+    const maxNet = Math.max(...items.map((x) => x.net), 1);
+    const list = h('ul', 'mr-bt-list');
+    for (const { it, then, now, net } of items) {
+      const out = String(it.outcome || 'Yes').slice(0, 24), against = it.side === 'no';
+      const dir = now > then + 0.0001 ? 'up' : now < then - 0.0001 ? 'down' : 'flat';
+      const li = h('li', 'mr-bt mr-' + dir);
+      const url = safeUrl(it.url || '');
+      const q = h(url ? 'a' : 'span', 'mr-bt-q', String(it.title || 'Market'));
+      if (url) { q.href = url; q.target = '_blank'; q.rel = 'noopener noreferrer'; }
+      li.append(q);
+      /* Odds: track 0..100 with a coin-flip tick, ring at yesterday, dot now, arrow between; big number at the right. */
+      const odds = h('div', 'mr-bt-odds');
+      const track = h('span', 'mr-bt-track'); track.setAttribute('aria-hidden', 'true');
+      const lo = Math.min(then, now), hi = Math.max(then, now);
+      const mv = h('span', 'mr-bt-move'); mv.style.left = lo * 100 + '%'; mv.style.width = (hi - lo) * 100 + '%';
+      const was = h('span', 'mr-bt-was'); was.style.left = then * 100 + '%';
+      const is = h('span', 'mr-bt-is'); is.style.left = now * 100 + '%';
+      track.append(h('span', 'mr-bt-mid'), mv, was, is);
+      const scale = h('span', 'mr-bt-scale'); scale.setAttribute('aria-hidden', 'true');
+      scale.append(h('span', '', '0'), h('span', '', '50/50'), h('span', '', '100%'));
+      const big = h('span', 'mr-bt-big');
+      const pts = Math.round((now - then) * 100);
+      big.append(h('span', 'mr-bt-num', pc(now)), h('span', 'mr-bt-chg', `${arrow(now - then)} ${Math.abs(pts)} pts · was ${pc(then)}`));
+      const tw = h('span', 'mr-bt-tw'); tw.append(track, scale);
+      odds.append(h('span', 'mr-bt-lbl', `Chance of ${out}`), tw, big);
+      li.append(odds);
+      /* Money: bar on one scale, FOR/AGAINST badge, one dot per wallet. */
+      const money = h('div', 'mr-bt-money');
+      const mb = h('span', 'mr-bt-mbar'); mb.setAttribute('aria-hidden', 'true');
+      const fill = h('span', 'mr-bt-mfill'); fill.style.width = Math.max(net / maxNet, 0.04) * 100 + '%'; mb.append(fill);
+      const w = Math.max(num(it.wallets) ?? 1, 1), fresh = Math.min(num(it.fresh) ?? 0, w);
+      const dots = h('span', 'mr-bt-dots'); dots.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < Math.min(w, 10); i++) dots.append(h('i', i < fresh ? 'mr-bt-new' : ''));
+      const badge = h('span', 'mr-bt-side', against ? 'Against' : 'For');
+      const right = h('span', 'mr-bt-right');
+      right.append(h('span', 'mr-bt-usd', usdK(net)), badge, dots);
+      money.append(h('span', 'mr-bt-lbl', 'Big bets'), mb, right);
+      li.append(money);
+      const said = `${w} bettor${w === 1 ? '' : 's'}${fresh ? ` (${fresh} brand-new)` : ''} put ${usdK(net)} on ${against ? 'No' : out}, and the odds followed: ${pc(then)} → ${pc(now)}.`;
+      li.append(h('p', 'mr-bt-said', said));
+      li.setAttribute('aria-label', `${it.title}. ${said}`);
+      list.append(li);
+    }
+    card.append(list);
+    /* Track record: a square per past pick, filled when it came true, beside what the odds expected. */
+    const r = d.record && typeof d.record === 'object' ? d.record : null;
+    const n = r ? Math.min(num(r.n) ?? 0, 200) : 0;
+    if (n > 0) {
+      const wins = Math.min(num(r.wins) ?? 0, n), exp = num(r.implied), pnl = num(r.pnl);
+      const rec = h('div', 'mr-bt-rec');
+      const sq = h('span', 'mr-bt-sqs'); sq.setAttribute('aria-hidden', 'true');
+      for (let i = 0; i < n; i++) sq.append(h('i', i < wins ? 'mr-bt-hit' : ''));
+      const edge = exp == null ? '' : wins - exp >= 2 ? 'Better than the odds expected.' : exp - wins >= 2 ? 'Worse than the odds expected.' : 'About what the odds expected: no edge yet.';
+      const txt = h('span', 'mr-bt-rtxt');
+      txt.append(h('strong', '', `Track record: ${wins} of ${n} came true`),
+        h('span', '', ` · odds expected ${exp != null ? Math.round(exp) : '?'}${pnl != null ? ` · $1 on each: ${pnl >= 0 ? '+' : '−'}$${Math.abs(pnl).toFixed(2)}` : ''}. ${edge}`));
+      rec.append(sq, txt);
+      rec.setAttribute('aria-label', txt.textContent);
+      card.append(rec);
+    }
+    card.append(h('p', 'mr-bt-foot', 'Crowd odds, not advice.'));
+    return card;
+  }
+
+  /* Odds: Polymarket's chance that each AI model is out by each date, as one stacked bar per model.
+   *   {"kind":"odds","v":1,"items":[{"label","url","points":[{"date":"YYYY-MM-DD","p":0.38,"ch":0.03}],"even":"YYYY-MM-DD"|null}]}
+   * The card uses the first two dates any item has: dark = by the first date, light = extra chance by the second (odds
+   * only grow with a later date). A dashed line marks 50/50. Rows run likeliest first; a big move today gets a chip,
+   * and a 50/50 date past the bar is noted under the name. */
+  function odds(d) {
+    const items = (Array.isArray(d.items) ? d.items : []).slice(0, 12);
+    const dates = [...new Set(items.flatMap((it) => (Array.isArray(it.points) ? it.points : []).map((p) => String(p.date || ''))))].filter((x) => /^\d{4}-\d{2}-\d{2}$/.test(x)).sort().slice(0, 2);
+    const short = (iso) => dayName(iso, { day: 'numeric', month: 'short' });
+    const card = h('section', 'mr-card mr-odds');
+    const legend = h('div', 'mr-od-legend');
+    dates.forEach((dt, i) => { const k = h('span', 'mr-od-key'); k.append(h('i', 'mr-od-sw mr-od-s' + i), 'by ' + short(dt)); legend.append(k); });
+    const k50 = h('span', 'mr-od-key'); k50.append(h('i', 'mr-od-sw mr-od-s50'), 'coin flip'); legend.append(k50);
+    card.append(legend);
+    const rows = items.map((it) => {
+      const at = {}; for (const p of Array.isArray(it.points) ? it.points : []) if (num(p.p) != null) at[String(p.date)] = p;
+      const ps = dates.map((dt) => (at[dt] ? clamp01(at[dt].p) : null));
+      return { it, at, ps, a: ps[0] ?? 0, b: ps[1] ?? ps[0] ?? 0 };
+    }).sort((x, y) => y.a - x.a || y.b - x.b);
+    const list = h('ul', 'mr-od-list');
+    for (const { it, at, ps, a, b } of rows) {
+      const li = h('li', 'mr-od');
+      const url = safeUrl(it.url || '');
+      const nm = h('span', 'mr-od-name');
+      const t = h(url ? 'a' : 'span', 'mr-od-t', String(it.label || 'Model'));
+      if (url) { t.href = url; t.target = '_blank'; t.rel = 'noopener noreferrer'; }
+      nm.append(t);
+      const even = /^\d{4}-\d{2}-\d{2}$/.test(String(it.even || '')) ? String(it.even) : null;
+      if (even && dates.length && even > dates[dates.length - 1]) nm.append(h('span', 'mr-od-even', '50/50 by ' + dayName(even, { day: 'numeric', month: 'short', year: 'numeric' })));
+      const bar = h('span', 'mr-od-bar'); bar.setAttribute('aria-hidden', 'true');
+      const s0 = h('span', 'mr-od-s0'), s1 = h('span', 'mr-od-s1');
+      s0.style.width = (ps[0] ?? 0) * 100 + '%'; s1.style.width = Math.max(b - (ps[0] ?? 0), 0) * 100 + '%';
+      bar.append(s0, s1, h('span', 'mr-od-mid'));
+      const vals = h('span', 'mr-od-vals');
+      ps.forEach((p, i) => vals.append(h('span', 'mr-od-v' + i, p == null ? '–' : pc(p))));
+      const near = dates.map((dt) => at[dt]).find(Boolean);
+      const ch = near ? num(near.ch) ?? 0 : 0;
+      vals.append(Math.abs(ch) >= 0.08 ? h('span', 'mr-od-chip mr-' + tone(ch), `${arrow(ch)}${Math.round(Math.abs(ch) * 100)} today`) : h('span', 'mr-od-chip mr-od-nochip'));
+      li.append(nm, bar, vals);
+      li.setAttribute('aria-label', `${it.label}: ` + dates.map((dt, i) => `${ps[i] == null ? 'no market' : pc(ps[i])} by ${short(dt)}`).join(', ') + (even ? `, 50/50 by ${even}` : ''));
+      list.append(li);
+    }
+    card.append(list);
+    return card;
+  }
+
+  const kinds = { portfolio, selling, health, bets, odds };
+  /* Cards behind an app switch (wizard.app-switches/1, served by the box; the report response carries the owner's
+   * state). Switch off: the block renders as nothing (never the raw JSON) and the text lines after it show as before.
+   * Switch on: the card is drawn and settle() hides the text lines that follow it up to the next heading. */
+  const gated = { bets: 'polymarket-cards', odds: 'polymarket-cards' };
+  let on = new Set();
+  function setSwitches(map) {
+    on = new Set(map && typeof map === 'object' ? Object.keys(map).filter((k) => map[k] === true) : []);
+  }
+  /* After a render: hide the siblings after each gated card, up to the next h1/h2 (the generator's text copy). */
+  function settle(root) {
+    for (const card of [...root.children].filter((n) => n.classList.contains('mr-bets') || n.classList.contains('mr-odds'))) {
+      for (let n = card.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
+        if (n.classList.contains('mr-card')) break;
+        n.hidden = true; n.classList.add('mr-card-text');
+      }
+    }
+    return root;
+  }
   /* Returns a node for a fenced block: a card for a known `lang`, else <pre>. */
   function render(lang, text) {
+    if (gated[lang] && !on.has(gated[lang])) { const n = h('div', 'mr-card-off'); n.hidden = true; return n; }
     if (kinds[lang]) {
       try { const d = JSON.parse(text); if (d && typeof d === 'object') return kinds[lang](d); } catch (e) { /* fall through */ }
     }
     const pre = h('pre', 'mr-pre'); pre.append(h('code', '', text)); return pre;
   }
-  window.MorningCards = { render, kinds: Object.keys(kinds) };
+  window.MorningCards = { render, settle, setSwitches, kinds: Object.keys(kinds) };
 })();
