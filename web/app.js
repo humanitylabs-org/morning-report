@@ -68,19 +68,23 @@ async function show(date) {
   } catch (error) { if (request === editionRequest) say(error.message, 'error'); }
 }
 
-el('pick').addEventListener('change', (e) => show(e.target.value));
+/* When the owner last chose an edition by hand. A new morning's edition takes over the window (refresh below)
+ * unless they picked one in the last few minutes, so a long-lived window never sticks on an old edition. */
+let pickedAt = 0, behind = false;
+const picked = (date) => { pickedAt = Date.now(); behind = false; return show(date); };
+el('pick').addEventListener('change', (e) => picked(e.target.value));
 /* The day switcher lives in the app, at the top, in every window and skin. (0.4-0.9 moved it into the window's
  * title bar whenever the shell offered one; there it read as part of the title and the owner lost it.) Clear any
  * title-bar tools an earlier version left on this window. */
 const clearTitlebar = () => { try { Promise.resolve(window.WizardApp?.titlebar?.set?.([])).catch(() => {}); } catch (e) {} };
-el('older').addEventListener('click', () => current?.older && show(current.older));
-el('newer').addEventListener('click', () => current?.newer && show(current.newer));
+el('older').addEventListener('click', () => current?.older && picked(current.older));
+el('newer').addEventListener('click', () => current?.newer && picked(current.newer));
 document.addEventListener('keydown', (e) => {
   if (e.target.closest('select, input, textarea')) return;
   // Do not turn keyboard text selection (including Shift+arrows) into edition navigation.
   if (e.shiftKey || e.altKey || e.ctrlKey || e.metaKey || !window.getSelection()?.isCollapsed) return;
-  if (e.key === 'ArrowLeft' && current?.older) show(current.older);
-  if (e.key === 'ArrowRight' && current?.newer) show(current.newer);
+  if (e.key === 'ArrowLeft' && current?.older) picked(current.older);
+  if (e.key === 'ArrowRight' && current?.newer) picked(current.newer);
 });
 
 async function load() {
@@ -174,18 +178,40 @@ el('read-top').addEventListener('click', markRead);
 el('read-end').addEventListener('click', markRead);
 
 let labelledDay = briefingDay(0);
-async function refresh() {
-  if (labelledDay !== briefingDay(0)) { labelledDay = briefingDay(0); fillPicker(); if (current) el('pick').value = current.date; }
+const PICK_HOLD = 10 * 60 * 1000;
+let refreshing = null;
+/* Follow new editions (issue #27): when a newer edition arrives, or the briefing day rolls over, show the newest
+ * one, whichever edition the window was on, unless the owner picked one by hand in the last ten minutes. */
+async function refreshNow() {
+  const rolled = labelledDay !== briefingDay(0);
+  if (rolled) { labelledDay = briefingDay(0); fillPicker(); if (current) el('pick').value = current.date; }
   try {
     const newest = reports.find((r) => r.markdown)?.date;
     const d = await getJSON('api/reports');
     const top = (d.reports || []).find((r) => r.markdown)?.date;
-    if (top && top !== newest) { const onNewest = current?.date === newest; reports = d.reports; fillPicker(); if (onNewest) await show(top); else if (current) el('pick').value = current.date; }
+    const arrived = !!top && top !== newest;
+    if (arrived) { reports = d.reports; fillPicker(); if (current) el('pick').value = current.date; }
+    if (arrived || rolled) behind = true;
+    if (!top || current?.date === top) behind = false;
+    else if (behind && Date.now() - pickedAt > PICK_HOLD) { behind = false; await show(top); }
   } catch (e) {}
   await loadSeen(); readButtons();
 }
+const refresh = () => (refreshing ||= refreshNow().finally(() => { refreshing = null; }));
 
 load().then(() => { clearTitlebar(); setTimeout(clearTitlebar, 3000); }).then(loadSeen).then(readButtons);
 // A new edition arrives each morning: check every few minutes while open, and whenever it comes back into view.
+// A window kept inside the shell may never see visibilitychange, so also check on focus, pageshow, and when the
+// window comes back into view (the shell reuses an open window for the morning notification without reloading).
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+addEventListener('focus', () => refresh());
+addEventListener('pageshow', (e) => { if (e.persisted) refresh(); });
+if ('IntersectionObserver' in window) {
+  let inView = true;
+  new IntersectionObserver((entries) => {
+    const now = entries.some((x) => x.isIntersecting);
+    if (now && !inView) refresh();
+    inView = now;
+  }).observe(document.body);
+}
 setInterval(refresh, 5 * 60 * 1000);
