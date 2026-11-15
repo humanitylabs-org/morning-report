@@ -379,8 +379,8 @@ from urllib.parse import urlsplit as _sw_urlsplit
 
 SWITCHES = [
     {'id': 'polymarket-cards', 'name': 'Polymarket cards',
-     'description': 'Draw the Polymarket sections as cards: big one-sided bets as odds tiles, and the AI model '
-                    'release odds as one bar per model.',
+     'description': 'Draw the two Polymarket sections as one minimal table each: name, a bar '
+                    '(chance now and its 24h move) and three numbers.',
      'default': False, 'issues': ['humanitylabs-org/morning-report#22']},
 ]
 _SW_CONTRACT = 'wizard.app-switches/1'

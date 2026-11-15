@@ -69,40 +69,38 @@ const md = [
 
     const d = await page.evaluate(() => {
       const b = document.querySelector('.mr-bets'), o = document.querySelector('.mr-odds');
-      const tiles = [...b.querySelectorAll('.mr-bt')];
+      const rows = (c) => [...c.querySelectorAll('.mr-pm-row:not(.mr-pm-head)')];
+      const w = (n) => n ? Math.round(parseFloat(n.style.width)) : null;
+      const bar = (r) => [w(r.querySelector('.mr-pm-fill')), w(r.querySelector('.mr-pm-gain')), w(r.querySelector('.mr-pm-loss'))];
       return {
-        cls: tiles.map((t) => t.className),
-        q: tiles.map((t) => [t.querySelector('.mr-bt-q').tagName, t.querySelector('.mr-bt-q').getAttribute('href')]),
-        num: tiles.map((t) => t.querySelector('.mr-bt-num').textContent),
-        chg: tiles.map((t) => t.querySelector('.mr-bt-chg').textContent),
-        side: tiles.map((t) => t.querySelector('.mr-bt-side').textContent),
-        usd: tiles.map((t) => t.querySelector('.mr-bt-usd').textContent),
-        dots: tiles.map((t) => [t.querySelectorAll('.mr-bt-dots i').length, t.querySelectorAll('.mr-bt-dots i.mr-bt-new').length]),
-        said: tiles.map((t) => t.querySelector('.mr-bt-said').textContent),
-        sq: [b.querySelectorAll('.mr-bt-sqs i').length, b.querySelectorAll('.mr-bt-sqs i.mr-bt-hit').length],
-        rec: b.querySelector('.mr-bt-rtxt').textContent,
-        foot: b.querySelector('.mr-bt-foot').textContent,
-        legend: [...o.querySelectorAll('.mr-od-key')].map((k) => k.textContent),
-        rows: [...o.querySelectorAll('.mr-od')].map((r) => [r.querySelector('.mr-od-t').textContent, r.querySelector('.mr-od-v0').textContent, r.querySelector('.mr-od-v1').textContent, r.querySelector('.mr-od-chip').textContent, r.querySelector('.mr-od-even')?.textContent || '']),
-        s0: o.querySelector('.mr-od .mr-od-s0').style.width, s1: o.querySelector('.mr-od .mr-od-s1').style.width,
+        heads: [b, o].map((c) => [...c.querySelectorAll('.mr-pm-head .mr-pm-n')].map((n) => n.textContent)),
+        bets: rows(b).map((r) => [r.querySelector('.mr-pm-name').tagName, r.querySelector('.mr-pm-name').getAttribute('href'),
+          r.querySelector('.mr-pm-name').textContent, ...[...r.querySelectorAll('.mr-pm-n')].map((n) => n.textContent)]),
+        betBars: rows(b).map(bar),
+        odds: rows(o).map((r) => [r.querySelector('.mr-pm-name').textContent, ...[...r.querySelectorAll('.mr-pm-n')].map((n) => n.textContent)]),
+        oddBars: rows(o).map(bar),
+        foot: b.querySelector('.mr-pm-foot')?.textContent, oddFoot: o.querySelector('.mr-pm-foot'),
+        text: b.textContent + o.textContent,
+        colours: [...b.querySelectorAll('*'), ...o.querySelectorAll('*')].map((n) => getComputedStyle(n).color + ' ' + getComputedStyle(n).backgroundColor),
+        label: rows(b)[0].getAttribute('aria-label'),
         kinds: window.MorningCards.kinds,
       };
     });
-    assert.deepEqual(d.cls, ['mr-bt mr-up', 'mr-bt mr-down']);
-    assert.deepEqual(d.q, [['A', 'https://polymarket.com/event/x'], ['SPAN', null]], 'only https links');
-    assert.deepEqual(d.num, ['37%', '41%']);
-    assert.deepEqual(d.chg, ['▲ 5 pts · was 32%', '▼ 19 pts · was 60%']);
-    assert.deepEqual(d.side, ['For', 'Against']);
-    assert.deepEqual(d.usd, ['$70k', '$1.3M']);
-    assert.deepEqual(d.dots, [[1, 0], [3, 2]]);
-    assert.equal(d.said[0], '1 bettor put $70k on Yes, and the odds followed: 32% → 37%.');
-    assert.equal(d.said[1], '3 bettors (2 brand-new) put $1.3M on No, and the odds followed: 60% → 41%.');
-    assert.deepEqual(d.sq, [23, 17]);
-    assert.match(d.rec, /Track record: 17 of 23 came true · odds expected 16 · \$1 on each: −\$1\.38\. About what the odds expected/);
-    assert.equal(d.foot, 'Crowd odds, not advice.');
-    assert.deepEqual(d.legend, ['by 31 Dec', 'by 31 Mar', 'coin flip']);
-    assert.deepEqual(d.rows, [['Model A', '38%', '70%', '▲13 today', ''], ['Model B', '20%', '45%', '', '50/50 by 30 Jun 2027']], 'likeliest first');
-    assert.deepEqual([d.s0, d.s1], ['38%', '32%']);
+    assert.deepEqual(d.heads, [['Yes', '24h', 'Bets'], ['31 Dec', '24h', '31 Mar']]);
+    assert.deepEqual(d.bets, [
+      ['A', 'https://polymarket.com/event/x', 'Will it rain on Mars?', '37%', '+5', '$70k'],
+      ['SPAN', null, 'Will the thing ship by Friday?', '41%', '−19', '$1.3M'],
+    ], 'only https links; sign-only direction');
+    assert.deepEqual(d.betBars, [[32, 5, null], [41, null, 19]], 'filled = now, grey = gained, outline = lost');
+    assert.deepEqual(d.odds, [['Model A', '38%', '+13', '70%'], ['Model B', '20%', '+1', '45%']], 'likeliest first');
+    assert.deepEqual(d.oddBars, [[25, 13, null], [19, 1, null]]);
+    assert.equal(d.foot, 'Past picks: 17 of 23 came true (odds expected 16)');
+    assert.equal(d.oddFoot, null);
+    for (const gone of ['not advice', '▲', '▼', 'For', 'Against', 'bettor', 'Big money']) assert.ok(!d.text.includes(gone), `no "${gone}"`);
+    const rgb = (s) => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
+    const tinted = d.colours.flatMap((s) => s.split(') ').map(rgb)).filter(([r, g, bl]) => r != null && Math.max(r, g, bl) - Math.min(r, g, bl) > 40);
+    assert.deepEqual(tinted, [], 'no green/red: ink and greys only');
+    assert.equal(d.label, 'Will it rain on Mars?: 37%, +5 in 24 hours, $70k of big bets');
     assert.ok(d.kinds.includes('bets') && d.kinds.includes('odds'));
     assert.ok(web('cards.js').includes('function bets(') && web('cards.js').includes('function odds('), 'generator probe strings');
 
@@ -121,9 +119,15 @@ const md = [
         return bad;
       });
       assert.deepEqual(spill, [], `no overflow at ${width}px`);
-      const wrapped = await page.evaluate(() => [...document.querySelectorAll('.mr-bt-usd, .mr-bt-side')]
+      const phone = await page.evaluate(() => {
+        const r = document.querySelector('.mr-bets .mr-pm-row:not(.mr-pm-head)');
+        const n = r.querySelector('.mr-pm-name').getBoundingClientRect(), bar = r.querySelector('.mr-pm-bar').getBoundingClientRect();
+        return bar.top >= n.bottom - 1;
+      });
+      assert.equal(phone, width <= 520 + 40, `name on its own line only on a phone (${width}px)`);
+      const wrapped = await page.evaluate(() => [...document.querySelectorAll('.mr-pm-n')]
         .filter((n) => n.getClientRects().length > 1 || n.getBoundingClientRect().height > 30).map((n) => n.textContent));
-      assert.deepEqual(wrapped, [], `amount and badge stay on one line at ${width}px`);
+      assert.deepEqual(wrapped, [], `numbers stay on one line at ${width}px`);
     }
     // Bad JSON with the switch on falls back to <pre> (visible, never hidden) and keeps the text after it.
     const bad = await page.evaluate(() => {
