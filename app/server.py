@@ -96,7 +96,8 @@ def get_report(day=None):
     text = _read(idx[day]['md']).decode('utf-8', 'replace')
     i = days.index(day)
     return {'date': day, 'title': _title(text), 'markdown': text, 'pdf': 'pdf' in idx[day],
-            'older': days[i - 1] if i > 0 else None, 'newer': days[i + 1] if i + 1 < len(days) else None}
+            'older': days[i - 1] if i > 0 else None, 'newer': days[i + 1] if i + 1 < len(days) else None,
+            'switches': {s['id']: s['on'] for s in switches_doc()['switches']}}
 
 
 # Read state (server-side, so badge, inbox and every device agree): the newest edition the owner has seen.
@@ -376,7 +377,12 @@ import threading as _sw_threading
 from pathlib import Path as _SwPath
 from urllib.parse import urlsplit as _sw_urlsplit
 
-SWITCHES = []
+SWITCHES = [
+    {'id': 'polymarket-cards', 'name': 'Polymarket cards',
+     'description': 'Draw the Polymarket sections as cards: big one-sided bets as odds tiles, and the AI model '
+                    'release odds as one bar per model.',
+     'default': False, 'issues': ['humanitylabs-org/morning-report#22']},
+]
 _SW_CONTRACT = 'wizard.app-switches/1'
 _SW_ROUTE = _sw_re.compile(r'(?:/[a-z0-9][a-z0-9-]{0,62})?/api/switches/?')
 _SW_LOCAL = {'localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'}

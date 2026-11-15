@@ -83,6 +83,7 @@
     }
     if (fence) root.append(Object.assign(document.createElement('pre'), { textContent: '```' + fence.lang + '\n' + fence.body.join('\n') }));
     flushPara();
+    if (window.MorningCards && window.MorningCards.settle) window.MorningCards.settle(root);
     return root;
   }
   window.MorningMarkdown = { render };
