@@ -173,6 +173,8 @@ html .mr-paper ::selection, html .mr-paper::selection { background: color-mix(in
   .mr-pm-head .mr-pm-n:nth-child(3) { grid-column: 2; }
   .mr-pm-bar { grid-column: 1; }
 }
+.mr-paper .mr-pm-wait { margin: 0 0 10px; font-size: 12.5px; font-style: italic; color: var(--mut, #8a8478); }
+@media print { .mr-paper .mr-pm-wait { display: none; } }
 @media print { .mr-pm { break-inside: avoid; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
 .mr-paper .mr-pre { margin: 0 0 10px; padding: 10px 12px; background: #f1ece0; border-radius: 6px; overflow-x: auto; font: 12.5px/1.45 ui-monospace, Menlo, monospace; white-space: pre-wrap; }
 

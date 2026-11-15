@@ -260,8 +260,22 @@
   function setSwitches(map) {
     on = new Set(map && typeof map === 'object' ? Object.keys(map).filter((k) => map[k] === true) : []);
   }
+  /* With the switch on, a Polymarket section that carries no bets/odds block (an edition written before the generator
+   * saw this app's cards, morning-report#22) says so under its heading, so an empty switch never looks broken. */
+  const PM_WAIT = 'No table in this edition: it was written before Morning Report could draw one. The table starts with the next report.';
+  function pmWait(root) {
+    if (!on.has('polymarket-cards')) return;
+    for (const hd of [...root.children].filter((n) => n.tagName === 'H2' && /^polymarket\b/i.test(n.textContent.trim()))) {
+      let card = false;
+      for (let n = hd.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
+        if (n.classList.contains('mr-bets') || n.classList.contains('mr-odds')) { card = true; break; }
+      }
+      if (!card) hd.after(h('p', 'mr-pm-wait', PM_WAIT));
+    }
+  }
   /* After a render: hide the siblings after each gated card, up to the next h1/h2 (the generator's text copy). */
   function settle(root) {
+    pmWait(root);
     for (const card of [...root.children].filter((n) => n.classList.contains('mr-bets') || n.classList.contains('mr-odds'))) {
       for (let n = card.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
         if (n.classList.contains('mr-card')) break;

@@ -136,6 +136,20 @@ const md = [
       return [f.querySelector('pre') ? 'PRE' : '', f.querySelector('li').hidden];
     });
     assert.deepEqual(bad, ['PRE', false]);
+    // An edition written before the generator sent the blocks: switch on says so under each Polymarket heading and
+    // keeps the text; switch off, or an edition with the cards, shows no note.
+    const old = md.replace(/```(bets|odds)\n.*\n```\n/g, '');
+    const wait = (text, sw) => page.evaluate(([text, sw]) => {
+      window.MorningCards.setSwitches(sw);
+      const f = window.MorningMarkdown.render(text);
+      return { notes: [...f.querySelectorAll('.mr-pm-wait')].map((n) => n.previousElementSibling.textContent),
+        li: [...f.querySelectorAll('li')].filter((n) => !n.closest('[hidden]')).length };
+    }, [text, sw]);
+    const w1 = await wait(old, { 'polymarket-cards': true });
+    assert.deepEqual(w1.notes, ['Polymarket', 'Polymarket watch list'], 'old edition, switch on: a note under each heading');
+    assert.equal(w1.li, 3, 'old edition: the text lines stay');
+    assert.deepEqual((await wait(old, {})).notes, [], 'switch off: no note');
+    assert.deepEqual((await wait(md, { 'polymarket-cards': true })).notes, [], 'edition with cards: no note');
     console.log('polymarket cards: ok');
   } finally { await browser.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });
