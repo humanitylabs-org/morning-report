@@ -1,7 +1,7 @@
 'use strict';
-// cards.js `bets` and `odds` blocks behind the `polymarket-cards` switch (humanitylabs-org/morning-report#22), in a
-// real Chromium page: switch off draws nothing and keeps the text lines; switch on draws the card, hides the text
-// lines after it up to the next heading, and lays out without overflow at 820px and 400px.
+// cards.js `bets` and `odds` blocks (humanitylabs-org/morning-report#22, always on since the polymarket-cards switch
+// was removed), in a real Chromium page: the card is drawn, the text lines after it up to the next heading are
+// hidden, and it lays out without overflow at 820px and 400px.
 // node tests/polymarket.browser.test.js   (PLAYWRIGHT_MODULE / CHROMIUM_PATH as in reply.browser.test.js)
 const assert = require('node:assert/strict');
 const fs = require('node:fs'), path = require('node:path');
@@ -41,26 +41,16 @@ const md = [
     await page.setContent(`<!doctype html><style>${web('styles.css')}</style><div class="mr-paper" id="out" style="--font: system-ui, sans-serif"></div>`);
     await page.addScriptTag({ content: web('cards.js') });
     await page.addScriptTag({ content: web('markdown.js') });
-    const draw = (sw) => page.evaluate(([text, sw]) => {
-      window.MorningCards.setSwitches(sw);
+    const draw = () => page.evaluate((text) => {
       const out = document.getElementById('out');
       out.replaceChildren(window.MorningMarkdown.render(text));
       const shown = (sel) => [...out.querySelectorAll(sel)].filter((n) => !n.closest('[hidden]')).map((n) => n.textContent.trim());
       return { li: shown('li'), p: shown('p'), pre: out.querySelectorAll('pre').length, bets: out.querySelectorAll('.mr-bets').length,
         odds: out.querySelectorAll('.mr-odds').length, raw: out.textContent.includes('"kind"') && !!shown('*').find((t) => t.includes('"kind"')) };
-    }, [md, sw]);
+    }, md);
 
-    // Switch off (default, or anything but true): no card, no raw JSON, every text line as today.
-    for (const sw of [undefined, {}, { 'polymarket-cards': false }, { 'polymarket-cards': 'yes' }]) {
-      const r = await draw(sw);
-      assert.equal(r.bets + r.odds + r.pre, 0, 'off: nothing drawn for bets/odds');
-      assert.equal(r.raw, false, 'off: never the raw JSON');
-      assert.equal(r.li.length, 3, 'off: every bullet line shows');
-      assert.ok(r.p.includes('Track record: 17 of 23.') && r.p.includes('Sunny.'));
-    }
-
-    // Switch on: both cards, the text lines after each card are hidden, the intro above and other sections stay.
-    const on = await draw({ 'polymarket-cards': true });
+    // Both cards, the text lines after each card are hidden, the intro above and other sections stay.
+    const on = await draw();
     assert.equal(on.bets, 1); assert.equal(on.odds, 1); assert.equal(on.pre, 0);
     assert.ok(on.p.includes('Big one-sided bets in the last day.'), 'intro line above the card stays');
     assert.ok(on.p.includes('Sunny.'), 'next section untouched');
@@ -83,7 +73,7 @@ const md = [
         text: b.textContent + o.textContent,
         colours: [...b.querySelectorAll('*'), ...o.querySelectorAll('*')].map((n) => getComputedStyle(n).color + ' ' + getComputedStyle(n).backgroundColor),
         label: rows(b)[0].getAttribute('aria-label'),
-        kinds: window.MorningCards.kinds,
+        kinds: window.MorningCards.kinds, setSwitches: window.MorningCards.setSwitches,
       };
     });
     assert.deepEqual(d.heads, [['Yes', '24h', 'Bets'], ['31 Dec', '24h', '31 Mar']]);
@@ -102,6 +92,7 @@ const md = [
     assert.deepEqual(tinted, [], 'no green/red: ink and greys only');
     assert.equal(d.label, 'Will it rain on Mars?: 37%, +5 in 24 hours, $70k of big bets');
     assert.ok(d.kinds.includes('bets') && d.kinds.includes('odds'));
+    assert.equal(d.setSwitches, undefined, 'no switch left in cards.js');
     assert.ok(web('cards.js').includes('function bets(') && web('cards.js').includes('function odds('), 'generator probe strings');
 
     // Layout: nothing spills out of its card at desktop and phone width.
@@ -129,27 +120,24 @@ const md = [
         .filter((n) => n.getClientRects().length > 1 || n.getBoundingClientRect().height > 30).map((n) => n.textContent));
       assert.deepEqual(wrapped, [], `numbers stay on one line at ${width}px`);
     }
-    // Bad JSON with the switch on falls back to <pre> (visible, never hidden) and keeps the text after it.
+    // Bad JSON falls back to <pre> (visible, never hidden) and keeps the text after it.
     const bad = await page.evaluate(() => {
-      window.MorningCards.setSwitches({ 'polymarket-cards': true });
       const f = window.MorningMarkdown.render('## P\n\n```bets\n{not json\n```\n\n- line');
       return [f.querySelector('pre') ? 'PRE' : '', f.querySelector('li').hidden];
     });
     assert.deepEqual(bad, ['PRE', false]);
-    // An edition written before the generator sent the blocks: switch on says so under each Polymarket heading and
-    // keeps the text; switch off, or an edition with the cards, shows no note.
+    // An edition written before the generator sent the blocks says so under each Polymarket heading and keeps the
+    // text; an edition with the cards shows no note.
     const old = md.replace(/```(bets|odds)\n.*\n```\n/g, '');
-    const wait = (text, sw) => page.evaluate(([text, sw]) => {
-      window.MorningCards.setSwitches(sw);
+    const wait = (text) => page.evaluate((text) => {
       const f = window.MorningMarkdown.render(text);
       return { notes: [...f.querySelectorAll('.mr-pm-wait')].map((n) => n.previousElementSibling.textContent),
         li: [...f.querySelectorAll('li')].filter((n) => !n.closest('[hidden]')).length };
-    }, [text, sw]);
-    const w1 = await wait(old, { 'polymarket-cards': true });
-    assert.deepEqual(w1.notes, ['Polymarket', 'Polymarket watch list'], 'old edition, switch on: a note under each heading');
+    }, text);
+    const w1 = await wait(old);
+    assert.deepEqual(w1.notes, ['Polymarket', 'Polymarket watch list'], 'old edition: a note under each heading');
     assert.equal(w1.li, 3, 'old edition: the text lines stay');
-    assert.deepEqual((await wait(old, {})).notes, [], 'switch off: no note');
-    assert.deepEqual((await wait(md, { 'polymarket-cards': true })).notes, [], 'edition with cards: no note');
+    assert.deepEqual((await wait(md)).notes, [], 'edition with cards: no note');
     console.log('polymarket cards: ok');
   } finally { await browser.close(); }
 })().catch((e) => { console.error(e); process.exit(1); });

@@ -50,7 +50,6 @@ async function show(date) {
     if (request !== editionRequest) return;
     current = data;
     const paper = el('paper');
-    window.MorningCards?.setSwitches?.(data.switches);
     paper.replaceChildren(window.MorningMarkdown.render(data.markdown));
     // Overnight lines carry the same Chats · Badge · Morning report · Off picker as Settings › Notifications.
     window.MorningRoutes?.decorate(paper);

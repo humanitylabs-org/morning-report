@@ -96,8 +96,7 @@ def get_report(day=None):
     text = _read(idx[day]['md']).decode('utf-8', 'replace')
     i = days.index(day)
     return {'date': day, 'title': _title(text), 'markdown': text, 'pdf': 'pdf' in idx[day],
-            'older': days[i - 1] if i > 0 else None, 'newer': days[i + 1] if i + 1 < len(days) else None,
-            'switches': {s['id']: s['on'] for s in switches_doc()['switches']}}
+            'older': days[i - 1] if i > 0 else None, 'newer': days[i + 1] if i + 1 < len(days) else None}
 
 
 # Read state (server-side, so badge, inbox and every device agree): the newest edition the owner has seen.
@@ -377,12 +376,7 @@ import threading as _sw_threading
 from pathlib import Path as _SwPath
 from urllib.parse import urlsplit as _sw_urlsplit
 
-SWITCHES = [
-    {'id': 'polymarket-cards', 'name': 'Polymarket cards',
-     'description': 'Draw the two Polymarket sections as one minimal table each: name, a bar '
-                    '(chance now and its 24h move) and three numbers.',
-     'default': False, 'issues': ['humanitylabs-org/morning-report#22']},
-]
+SWITCHES = []
 _SW_CONTRACT = 'wizard.app-switches/1'
 _SW_ROUTE = _sw_re.compile(r'(?:/[a-z0-9][a-z0-9-]{0,62})?/api/switches/?')
 _SW_LOCAL = {'localhost', '127.0.0.1', '::1', '[::1]', '0.0.0.0'}
@@ -513,6 +507,24 @@ def wizard_switches_install(handler_cls):
 wizard_switches_install(Handler)
 
 
+def prune_switches():
+    """Drop stored values for switches that are gone (polymarket-cards is always on since morning-report#22)."""
+    with _sw_lock:
+        saved = _sw_saved()
+        ids = {s['id'] for s in SWITCHES}
+        keep = {k: v for k, v in saved.items() if k in ids and isinstance(v, bool)}
+        if keep == saved:
+            return
+        f = _sw_file()
+        try:
+            tmp = f.with_name(f.name + '.tmp')
+            tmp.write_text(_sw_json.dumps(keep))
+            _sw_os.replace(tmp, f)
+        except OSError:
+            pass
+
+
 if __name__ == '__main__':
     seed_seen()
+    prune_switches()
     ThreadingHTTPServer((os.environ.get('BIND', '0.0.0.0'), int(_PORT)), Handler).serve_forever()

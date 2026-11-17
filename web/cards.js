@@ -252,19 +252,10 @@
     return pmTable('mr-odds', [dates[0] ? short(dates[0]) : '', '24h', dates[1] ? short(dates[1]) : ''], rows, '');
   }
   const kinds = { portfolio, selling, health, bets, odds };
-  /* Cards behind an app switch (wizard.app-switches/1, served by the box; the report response carries the owner's
-   * state). Switch off: the block renders as nothing (never the raw JSON) and the text lines after it show as before.
-   * Switch on: the card is drawn and settle() hides the text lines that follow it up to the next heading. */
-  const gated = { bets: 'polymarket-cards', odds: 'polymarket-cards' };
-  let on = new Set();
-  function setSwitches(map) {
-    on = new Set(map && typeof map === 'object' ? Object.keys(map).filter((k) => map[k] === true) : []);
-  }
-  /* With the switch on, a Polymarket section that carries no bets/odds block (an edition written before the generator
-   * saw this app's cards, morning-report#22) says so under its heading, so an empty switch never looks broken. */
+  /* A Polymarket section that carries no bets/odds block (an edition written before the generator saw this app's
+   * cards, morning-report#22) says so under its heading, so a missing table never looks broken. */
   const PM_WAIT = 'No table in this edition: it was written before Morning Report could draw one. The table starts with the next report.';
   function pmWait(root) {
-    if (!on.has('polymarket-cards')) return;
     for (const hd of [...root.children].filter((n) => n.tagName === 'H2' && /^polymarket\b/i.test(n.textContent.trim()))) {
       let card = false;
       for (let n = hd.nextElementSibling; n && !/^H[12]$/.test(n.tagName); n = n.nextElementSibling) {
@@ -273,7 +264,7 @@
       if (!card) hd.after(h('p', 'mr-pm-wait', PM_WAIT));
     }
   }
-  /* After a render: hide the siblings after each gated card, up to the next h1/h2 (the generator's text copy). */
+  /* After a render: hide the siblings after each bets/odds card, up to the next h1/h2 (the generator's text copy). */
   function settle(root) {
     pmWait(root);
     for (const card of [...root.children].filter((n) => n.classList.contains('mr-bets') || n.classList.contains('mr-odds'))) {
@@ -286,11 +277,10 @@
   }
   /* Returns a node for a fenced block: a card for a known `lang`, else <pre>. */
   function render(lang, text) {
-    if (gated[lang] && !on.has(gated[lang])) { const n = h('div', 'mr-card-off'); n.hidden = true; return n; }
     if (kinds[lang]) {
       try { const d = JSON.parse(text); if (d && typeof d === 'object') return kinds[lang](d); } catch (e) { /* fall through */ }
     }
     const pre = h('pre', 'mr-pre'); pre.append(h('code', '', text)); return pre;
   }
-  window.MorningCards = { render, settle, setSwitches, kinds: Object.keys(kinds) };
+  window.MorningCards = { render, settle, kinds: Object.keys(kinds) };
 })();
